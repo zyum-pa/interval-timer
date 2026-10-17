@@ -24,7 +24,7 @@ Keep the implementation simple, explain new technical terms and any proposed dep
 
 ## Current status
 
-Lesson 1: a single sound button. The timer has not been implemented yet.
+Lesson 1 complete: a single sound button, tested in Safari on the user's iPhone alongside music from the YouTube app. The timer has not been implemented yet.
 
 ## Run the sound lesson
 
@@ -58,4 +58,10 @@ References: [Web Audio best practices](https://developer.mozilla.org/en-US/docs/
 
 The YouTube app must already support playback while another app is visible for this setup to work. If music stops as soon as you leave YouTube, that is a separate issue from this sound button.
 
-iPhone audio alongside YouTube is awaiting a real-device test. Delayed workout cues will need another test when the timer is added.
+## Verified checkpoint — October 17, 2026
+
+- Desktop browser: the sound button completed playback and worked on repeated taps without browser errors.
+- Real iPhone test, reported by the user: the page opened in Safari, and tapping **Play test sound** produced an audible beep while YouTube music played in the background.
+- This verifies the button-triggered beep in the tested setup. Delayed workout cues will need another real-device test when the timer is added.
+
+Pause here before adding timer controls.
