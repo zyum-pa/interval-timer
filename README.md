@@ -16,7 +16,6 @@ A beginner learning project: a personal interval timer web app, developed on Win
 ## Later
 
 - Offline use.
-- Adding the app to the iPhone Home Screen.
 
 ## Working approach
 
@@ -26,9 +25,26 @@ Treat this as a guided course in product and software development. Before each l
 
 The timer is published at **[https://zyum-pa.github.io/interval-timer/](https://zyum-pa.github.io/interval-timer/)**. GitHub serves the website independently of the development PC. HTTPS is enabled. The user confirmed that the published timer works on the iPhone.
 
-Current small milestone: louder sounds before Home Screen and offline work. The user reported that cues were difficult to hear over YouTube. The shared tone level is increased from 0.2 to 0.6, with the same frequencies, durations, and short fade. This triples the generated signal amplitude, not perceived loudness. Actual loudness still depends on the phone and its media volume. No new packages or controls are added. The louder-cue iPhone test is pending.
+Current milestone: Lesson 7, Home Screen installation. The page now has a name, green stopwatch icons, and launch settings for opening in its own app window. The actual iPhone installation and app-window audio test are pending. Internet is still needed; offline support is the next lesson.
 
-The user confirmed that Lesson 5's starting countdown and final-five-second cues worked on the iPhone with YouTube playing. The preceding settings, workout, countdown, and sound-button tests were also confirmed. Offline use and Home Screen installation remain for the next milestone.
+The user confirmed that the louder sounds work well on the iPhone with YouTube playing. The shared tone level is 0.6, with the same frequencies, durations, and short fade as before. No new packages are added.
+
+The user confirmed that Lesson 5's starting countdown and final-five-second cues worked on the iPhone with YouTube playing. The preceding settings, workout, countdown, and sound-button tests were also confirmed.
+
+## Verify Lesson 7: Home Screen installation
+
+1. On the iPhone, open **https://zyum-pa.github.io/interval-timer/** in Safari and reload it. Look for **Interval Timer · Lesson 7**.
+2. Tap Safari's **Share** button, then **Add to Home Screen**. If shown, keep **Open as Web App** turned on. Keep the name **Interval Timer** and tap **Add**.
+3. On your Home Screen, expect a green icon with a white stopwatch. Tap it: the timer should open in its own app window without Safari's address bar.
+4. Keep the screen unlocked. Choose **8 seconds exercise / 7 seconds rest / 2 rounds** and run a workout. Expect the preparation countdown, warning ticks, phase changes, and completion without a final rest. Also try Pause/Resume and Reset.
+5. Start YouTube music, return to the timer through its Home Screen icon, and repeat. Confirm that music continues and the louder cues remain clear.
+6. Close the timer and reopen it from the icon while online. It should start ready with the usual defaults, not resume an old workout.
+
+Product decision: verify Home Screen use before adding offline support so any new audio or launch issue is easier to isolate. Installation does not yet provide offline operation. The phone still needs internet to open the app, and the timer should remain visible with the screen unlocked during workouts.
+
+`public/manifest.webmanifest` is a small browser settings file for the name, icons, launch address, and app-window display. Its relative addresses stay inside the GitHub Pages `/interval-timer/` folder. Apple-specific page settings and a 180-pixel icon support iPhone Home Screen use; the manifest also includes 192- and 512-pixel icons. `tools/generate-icons.ps1` regenerates all icons on Windows using built-in drawing tools. No service worker, new account, or package is introduced.
+
+References: [Apple's Home Screen instructions](https://support.apple.com/en-lamr/guide/iphone/iphea86e5236/ios), [manifest launch address](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/start_url).
 
 ## Publish with GitHub Pages
 
@@ -92,7 +108,7 @@ Keep the page visible and the screen unlocked during this test. Reload Safari to
 7. Start again, pause, then reset. Expect **00:10** and **Ready** again.
 8. On your iPhone, repeat with music playing in the YouTube app. Confirm that the automatic beep at zero is audible and that music continues.
 
-These are historical checks. The current page runs Lesson 5; use its checklist below.
+These are historical checks. The current page is Lesson 7; the Lesson 5 workout checks below still apply.
 
 ## Historical Lesson 3 checks
 
@@ -126,7 +142,7 @@ Product decisions: whole seconds and positive round counts keep setup straightfo
 
 ## Verify Lesson 5
 
-Reload Safari and look for **Interval Timer · Lesson 5**. Keep the page visible and the screen unlocked.
+These workout checks still apply on the current Lesson 7 page. Keep the page visible and the screen unlocked.
 
 1. Choose **8** seconds exercise, **7** seconds rest, **2** rounds. Tap Start: expect **Get ready**, **Round 1 of 2**, and **00:03 → 00:02 → 00:01**, with three short ticks. Then expect the exercise opening cue and the full **00:08** exercise period.
 2. In exercise, expect one short tick at **5, 4, 3, 2, 1** seconds remaining, then the stronger rest-opening cue. In rest, expect another five ticks before the next exercise-opening cue.
@@ -205,7 +221,14 @@ The YouTube app must already support playback while another app is visible for t
 
 - Increased the shared tone level for preparation ticks, final-five-second ticks, phase changes, completion, and the sound-test button. Workout timing and mixed-audio configuration are unchanged.
 - All 25 existing workout checks and the JavaScript syntax check passed. These checks do not establish perceived volume on the iPhone.
-- Real iPhone verification is pending: reload the published page, play the test sound at a comfortable phone volume, then repeat with YouTube at the usual listening level. Run **8 seconds exercise / 7 seconds rest / 2 rounds** to hear all five warning ticks in each phase, phase changes, and completion. Confirm clear cues, no unpleasant distortion, and uninterrupted music.
+- The user subsequently confirmed that the louder sounds work well on the iPhone with YouTube playing.
 - Home Screen installation and offline support are planned as separate small milestones after this listening test.
+
+## Lesson 7 checkpoint — October 18, 2026
+
+- Added Home Screen launch settings, a web app manifest, three green stopwatch icon sizes, and installation instructions on the page.
+- All 25 existing workout checks passed. Manifest launch addresses and PNG dimensions were checked. The 180-pixel iPhone icon was visually inspected.
+- At iPhone 12 screen dimensions in the desktop browser, the timer and installation instructions were readable. A short workout and the sound-test button completed without browser warnings or errors. This preview does not verify iPhone installation or app-window audio mixing.
+- The actual iPhone Home Screen launch and YouTube audio verification are pending. Pause for that result before adding offline support.
 
 Pause here for the user's test before adding further timer features.

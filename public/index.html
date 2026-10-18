@@ -3,14 +3,21 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f3f5f1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Interval Timer">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <title>Interval Timer · Workout with countdown cues</title>
-    <link rel="icon" href="data:,">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/timer-180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/timer-192.png">
     <link rel="stylesheet" href="styles.css">
     <script src="app.js" defer></script>
   </head>
   <body>
     <main>
-      <p class="eyebrow">Interval Timer · Lesson 5</p>
+      <p class="eyebrow">Interval Timer · Lesson 7</p>
       <h1>Ready, set, move.</h1>
       <p id="workout-summary">10 sec exercise · 5 sec rest · 2 rounds</p>
       <fieldset class="settings">
@@ -62,6 +69,15 @@
         <h2 id="sound-heading">Check sound separately</h2>
         <button id="sound-button" class="secondary" type="button">Play test sound</button>
         <p id="sound-status" role="status">Turn Silent Mode off and choose a comfortable volume.</p>
+      </section>
+      <section aria-labelledby="install-heading">
+        <h2 id="install-heading">Add to your iPhone Home Screen</h2>
+        <ol>
+          <li>Open this page in Safari and tap Share.</li>
+          <li>Choose Add to Home Screen. If shown, keep Open as Web App turned on.</li>
+          <li>Tap Add, then open Interval Timer from its new green stopwatch icon.</li>
+        </ol>
+        <p>Internet is still needed to open the timer. Keep it visible and your screen unlocked during workouts.</p>
       </section>
     </main>
   </body>
