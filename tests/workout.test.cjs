@@ -14,12 +14,16 @@ function createPage({ audioAllowed = true } = {}) {
   const intervals = new Map();
   const elements = new Map();
   const cues = [];
+  const defaultValues = { "#exercise-seconds": "10", "#rest-seconds": "5", "#rounds": "2" };
 
   function element(selector) {
     if (!elements.has(selector)) {
       elements.set(selector, {
         textContent: "",
+        value: defaultValues[selector] ?? "",
         disabled: false,
+        attributes: {},
+        setAttribute(name, value) { this.attributes[name] = value; },
         addEventListener(event, action) { this[event] = action; },
       });
     }
@@ -65,6 +69,14 @@ function createPage({ audioAllowed = true } = {}) {
     cues,
     text: (id) => element(`#${id}`).textContent,
     enabled: (id) => !element(`#${id}`).disabled,
+    value: (id) => element(`#${id}`).value,
+    invalid: (id) => element(`#${id}`).attributes["aria-invalid"] === "true",
+    change(id, value) {
+      const input = element(`#${id}`);
+      if (input.disabled) return;
+      input.value = String(value);
+      input.input();
+    },
     click(id) {
       const button = element(`#${id}`);
       if (!button.disabled) return button.click();
@@ -76,9 +88,9 @@ function createPage({ audioAllowed = true } = {}) {
   };
 }
 
-function expectDisplay(page, phase, round, time, status) {
+function expectDisplay(page, phase, round, time, status, totalRounds = 2) {
   assert.equal(page.text("phase-display"), phase);
-  assert.equal(page.text("round-display"), `Round ${round} of 2`);
+  assert.equal(page.text("round-display"), `Round ${round} of ${totalRounds}`);
   assert.equal(page.text("time-display"), time);
   assert.equal(page.text("timer-status"), status);
 }
@@ -185,4 +197,119 @@ test("The separate sound-test button still plays and becomes available again", a
   assert.equal(page.cues.length, 1);
   assert.equal(page.enabled("sound-button"), true);
   assert.match(page.text("sound-status"), /Test finished/);
+});
+
+function configure(page, exercise = 3, rest = 2, rounds = 3) {
+  page.change("exercise-seconds", exercise);
+  page.change("rest-seconds", rest);
+  page.change("rounds", rounds);
+}
+
+test("Chosen 3/2/3 settings produce a 13-second workout and correct round labels", () => {
+  const page = createPage();
+  configure(page);
+  expectDisplay(page, "Exercise", 1, "00:03", "Ready", 3);
+  page.click("start-button");
+  page.advance(3_000);
+  expectDisplay(page, "Rest", 1, "00:02", "Running", 3);
+  page.advance(2_000);
+  expectDisplay(page, "Exercise", 2, "00:03", "Running", 3);
+  page.advance(3_000);
+  expectDisplay(page, "Rest", 2, "00:02", "Running", 3);
+  page.advance(2_000);
+  expectDisplay(page, "Exercise", 3, "00:03", "Running", 3);
+  page.advance(3_000);
+  expectDisplay(page, "Complete", 3, "00:00", "Finished", 3);
+  assert.equal(page.cues.length, 5);
+});
+
+test("One round finishes after one exercise and never enters rest", () => {
+  const page = createPage();
+  configure(page, 4, 99, 1);
+  page.click("start-button");
+  page.advance(4_000);
+  expectDisplay(page, "Complete", 1, "00:00", "Finished", 1);
+  assert.equal(page.cues.length, 1);
+  assert.equal(page.cues[0].duration, 0.75);
+});
+
+test("Settings lock while running or paused; Reset keeps choices and unlocks them", () => {
+  const page = createPage();
+  configure(page);
+  page.click("start-button");
+  page.advance(3_500);
+  for (const id of ["exercise-seconds", "rest-seconds", "rounds"]) {
+    assert.equal(page.enabled(id), false);
+  }
+  page.change("rounds", 8);
+  assert.equal(page.value("rounds"), "3");
+  page.click("pause-button");
+  assert.equal(page.enabled("rounds"), false);
+  page.click("reset-button");
+  assert.equal(page.value("exercise-seconds"), "3");
+  assert.equal(page.value("rest-seconds"), "2");
+  assert.equal(page.value("rounds"), "3");
+  assert.equal(page.enabled("rounds"), true);
+  page.advance(20_000);
+  expectDisplay(page, "Exercise", 1, "00:03", "Ready", 3);
+  page.change("exercise-seconds", 4);
+  expectDisplay(page, "Exercise", 1, "00:04", "Ready", 3);
+});
+
+test("Invalid settings block Start, explain the field, and recover when corrected", () => {
+  for (const [id, errorId, correct, tooLarge] of [
+    ["exercise-seconds", "exercise-error", 10, 3601],
+    ["rest-seconds", "rest-error", 5, 3601],
+    ["rounds", "rounds-error", 2, 100],
+  ]) {
+    for (const invalid of ["", 0, -1, 1.5, "abc", "Infinity", "1e100", tooLarge]) {
+      const page = createPage();
+      page.change(id, invalid);
+      assert.equal(page.enabled("start-button"), false);
+      assert.equal(page.text("time-display"), "--:--");
+      assert.equal(page.text("timer-status"), "Check settings");
+      assert.equal(page.invalid(id), true);
+      assert.match(page.text(errorId), /Enter a whole number/);
+      page.click("start-button");
+      page.advance(30_000);
+      assert.equal(page.cues.length, 0);
+      page.change(id, correct);
+      assert.equal(page.invalid(id), false);
+      assert.equal(page.text(errorId), "");
+      assert.equal(page.enabled("start-button"), true);
+      expectDisplay(page, "Exercise", 1, "00:10", "Ready");
+    }
+  }
+});
+
+test("Times longer than a minute display minutes and seconds", () => {
+  const page = createPage();
+  configure(page, 61, 75, 2);
+  expectDisplay(page, "Exercise", 1, "01:01", "Ready");
+  page.click("start-button");
+  page.advance(61_000);
+  expectDisplay(page, "Rest", 1, "01:15", "Running");
+});
+
+test("Editing after completion previews a fresh workout using the new settings", () => {
+  const page = createPage();
+  configure(page, 1, 1, 1);
+  page.click("start-button");
+  page.advance(1_000);
+  assert.equal(page.enabled("exercise-seconds"), true);
+  page.change("exercise-seconds", 4);
+  expectDisplay(page, "Exercise", 1, "00:04", "Ready", 1);
+  page.click("start-button");
+  page.advance(4_000);
+  expectDisplay(page, "Complete", 1, "00:00", "Finished", 1);
+});
+
+test("Maximum supported settings stay valid and complete after the chosen duration", () => {
+  const page = createPage();
+  configure(page, 3600, 3600, 99);
+  expectDisplay(page, "Exercise", 1, "60:00", "Ready", 99);
+  assert.equal(page.enabled("start-button"), true);
+  page.click("start-button");
+  page.advance((99 + 98) * 3600 * 1000);
+  expectDisplay(page, "Complete", 99, "00:00", "Finished", 99);
 });

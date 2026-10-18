@@ -41,6 +41,40 @@ button:disabled { opacity: 0.65; cursor: wait; }
 
 .secondary { background: #dfe8e1; color: #182b32; }
 
+.settings { margin: 24px 0 0; padding: 16px; border: 1px solid #c4d0c7; border-radius: 14px; }
+
+.settings legend { padding: 0 6px; font-weight: 700; }
+
+.settings-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+
+.settings label { display: block; margin-bottom: 8px; font-weight: 650; }
+
+.settings label span { display: block; font-size: 0.85rem; font-weight: 400; }
+
+.settings input {
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 8px;
+  border: 1px solid #71877c;
+  border-radius: 8px;
+  background: white;
+  color: #182b32;
+  font: inherit;
+  font-size: 1.125rem;
+}
+
+.settings input:focus-visible { outline: 3px solid #176b58; outline-offset: 2px; }
+
+.settings input:disabled { background: #e5eae5; opacity: 1; color: #53635b; }
+
+.settings input[aria-invalid="true"] { border: 2px solid #a12a24; }
+
+.settings-hint { margin: 12px 0 0; font-size: 0.85rem; color: #3e625b; }
+
+.field-error { margin: 8px 0 0; font-size: 0.85rem; color: #a12a24; overflow-wrap: anywhere; }
+
+.field-error:empty { display: none; }
+
 .workout-progress { margin-top: 28px; text-align: center; }
 
 #phase-display { margin: 0; font-size: 1.6rem; font-weight: 750; }

@@ -7,19 +7,58 @@ const pauseButton = document.querySelector("#pause-button");
 const resetButton = document.querySelector("#reset-button");
 const phaseDisplay = document.querySelector("#phase-display");
 const roundDisplay = document.querySelector("#round-display");
-
-// A short, fixed workout keeps this lesson quick to test.
-const workout = [
-  { phase: "Exercise", round: 1, durationMs: 10_000 },
-  { phase: "Rest", round: 1, durationMs: 5_000 },
-  { phase: "Exercise", round: 2, durationMs: 10_000 },
+const workoutSummary = document.querySelector("#workout-summary");
+const settingsHint = document.querySelector("#settings-hint");
+const settingFields = [
+  { key: "exerciseSeconds", input: document.querySelector("#exercise-seconds"), error: document.querySelector("#exercise-error"), max: 3600 },
+  { key: "restSeconds", input: document.querySelector("#rest-seconds"), error: document.querySelector("#rest-error"), max: 3600 },
+  { key: "rounds", input: document.querySelector("#rounds"), error: document.querySelector("#rounds-error"), max: 99 },
 ];
+
+let settings = { exerciseSeconds: 10, restSeconds: 5, rounds: 2 };
+let settingsValid = true;
+let workout = buildWorkout(settings);
 let phaseIndex = 0;
 let remainingMs = workout[0].durationMs;
 let finishAt = 0;
 let updateInterval;
 let timerState = "ready";
 let audioContext;
+
+function buildWorkout(values) {
+  const phases = [];
+  for (let round = 1; round <= values.rounds; round += 1) {
+    phases.push({ phase: "Exercise", round, durationMs: values.exerciseSeconds * 1000 });
+    if (round < values.rounds) {
+      phases.push({ phase: "Rest", round, durationMs: values.restSeconds * 1000 });
+    }
+  }
+  return phases;
+}
+
+function applySettings() {
+  if (timerState === "running" || timerState === "paused") return;
+  const nextSettings = {};
+  settingsValid = true;
+  for (const field of settingFields) {
+    const raw = field.input.value.trim();
+    const value = Number(raw);
+    const valid = raw !== "" && Number.isInteger(value) && value >= 1 && value <= field.max;
+    const message = valid ? "" : `Enter a whole number from 1 to ${field.max.toLocaleString("en-US")}.`;
+    if (field.error.textContent !== message) field.error.textContent = message;
+    field.input.setAttribute("aria-invalid", String(!valid));
+    if (!valid) settingsValid = false;
+    nextSettings[field.key] = value;
+  }
+  timerState = "ready";
+  if (settingsValid) {
+    settings = nextSettings;
+    workout = buildWorkout(settings);
+    phaseIndex = 0;
+    remainingMs = workout[0].durationMs;
+  }
+  renderTimer();
+}
 
 // Ask supporting browsers to mix our beep with music from other apps.
 if ("audioSession" in navigator) {
@@ -71,20 +110,31 @@ function playBeep({ frequency = 880, duration = 0.25, onFinished = () => {} } = 
 function renderTimer() {
   // Round up so 00:00 appears only when the countdown actually finishes.
   const seconds = Math.ceil(remainingMs / 1000);
-  timeDisplay.textContent = `00:${String(seconds).padStart(2, "0")}`;
+  const minutesText = String(Math.floor(seconds / 60)).padStart(2, "0");
+  const secondsText = String(seconds % 60).padStart(2, "0");
+  timeDisplay.textContent = settingsValid ? `${minutesText}:${secondsText}` : "--:--";
   const phase = timerState === "finished" ? "Complete" : workout[phaseIndex].phase;
-  const round = `Round ${workout[phaseIndex].round} of 2`;
+  const round = settingsValid ? `Round ${workout[phaseIndex].round} of ${settings.rounds}` : "Round —";
   // Update announcements only when the phase or round actually changes.
   if (phaseDisplay.textContent !== phase) phaseDisplay.textContent = phase;
   if (roundDisplay.textContent !== round) roundDisplay.textContent = round;
   const labels = { ready: "Ready", running: "Running", paused: "Paused", finished: "Finished" };
+  const status = settingsValid ? labels[timerState] : "Check settings";
   // Announce status changes to screen readers only when the state changes.
-  if (timerStatus.textContent !== labels[timerState]) {
-    timerStatus.textContent = labels[timerState];
+  if (timerStatus.textContent !== status) {
+    timerStatus.textContent = status;
   }
-  startButton.disabled = timerState === "running" || timerState === "paused";
+  const active = timerState === "running" || timerState === "paused";
+  startButton.disabled = active || !settingsValid;
   pauseButton.disabled = timerState !== "running" && timerState !== "paused";
   pauseButton.textContent = timerState === "paused" ? "Resume" : "Pause";
+  for (const field of settingFields) field.input.disabled = active;
+  settingsHint.textContent = active
+    ? "Settings are locked. Reset to change them."
+    : "Adjust before starting. Reset keeps your choices.";
+  workoutSummary.textContent = settingsValid
+    ? `${settings.exerciseSeconds} sec exercise · ${settings.restSeconds} sec rest · ${settings.rounds} ${settings.rounds === 1 ? "round" : "rounds"}`
+    : "Correct the settings below to start.";
 }
 
 function stopUpdates() {
@@ -142,8 +192,8 @@ function runCountdown() {
 
 startButton.addEventListener("click", () => {
   if (timerState !== "ready" && timerState !== "finished") return;
-  phaseIndex = 0;
-  remainingMs = workout[0].durationMs;
+  applySettings();
+  if (!settingsValid) return;
   runCountdown();
 });
 
@@ -163,9 +213,7 @@ pauseButton.addEventListener("click", () => {
 resetButton.addEventListener("click", () => {
   stopUpdates();
   timerState = "ready";
-  phaseIndex = 0;
-  remainingMs = workout[0].durationMs;
-  renderTimer();
+  applySettings();
 });
 
 soundButton.addEventListener("click", async () => {
@@ -185,4 +233,5 @@ soundButton.addEventListener("click", async () => {
   }
 });
 
-renderTimer();
+for (const field of settingFields) field.input.addEventListener("input", applySettings);
+applySettings();

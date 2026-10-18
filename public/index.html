@@ -3,16 +3,38 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Interval Timer · Two-round workout</title>
+    <title>Interval Timer · Adjustable workout</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css">
     <script src="app.js" defer></script>
   </head>
   <body>
     <main>
-      <p class="eyebrow">Interval Timer · Lesson 3</p>
-      <h1>Your first workout.</h1>
-      <p>10 seconds exercise · 5 seconds rest · 2 rounds</p>
+      <p class="eyebrow">Interval Timer · Lesson 4</p>
+      <h1>Make it yours.</h1>
+      <p id="workout-summary">10 sec exercise · 5 sec rest · 2 rounds</p>
+      <fieldset class="settings">
+        <legend>Your workout</legend>
+        <div class="settings-grid">
+          <div>
+            <label for="exercise-seconds">Exercise <span>(seconds)</span></label>
+            <input id="exercise-seconds" type="number" inputmode="numeric" min="1" max="3600" step="1" value="10" required aria-describedby="time-limits exercise-error">
+            <p id="exercise-error" class="field-error" aria-live="polite"></p>
+          </div>
+          <div>
+            <label for="rest-seconds">Rest <span>(seconds)</span></label>
+            <input id="rest-seconds" type="number" inputmode="numeric" min="1" max="3600" step="1" value="5" required aria-describedby="time-limits rest-error">
+            <p id="rest-error" class="field-error" aria-live="polite"></p>
+          </div>
+          <div>
+            <label for="rounds">Rounds <span>(count)</span></label>
+            <input id="rounds" type="number" inputmode="numeric" min="1" max="99" step="1" value="2" required aria-describedby="round-limits rounds-error">
+            <p id="rounds-error" class="field-error" aria-live="polite"></p>
+          </div>
+        </div>
+        <p class="settings-hint"><span id="time-limits">Times: 1–3,600 seconds.</span> <span id="round-limits">Rounds: 1–99.</span> Whole numbers only.</p>
+        <p id="settings-hint" class="settings-hint">Adjust before starting. Reset keeps your choices.</p>
+      </fieldset>
       <div class="workout-progress" aria-live="polite" aria-atomic="true">
         <p id="phase-display">Exercise</p>
         <p id="round-display">Round 1 of 2</p>
@@ -27,12 +49,12 @@
       <section aria-labelledby="test-heading">
         <h2 id="test-heading">Follow the workout</h2>
         <ol>
-          <li>Exercise for ten seconds in round 1.</li>
-          <li>Rest for five seconds, then exercise for ten seconds in round 2.</li>
-          <li>Finish immediately after round 2, with no final rest.</li>
+          <li>Choose your exercise time, rest time, and number of rounds.</li>
+          <li>Start to alternate exercise and rest. Pause holds your place.</li>
+          <li>Finish after the last exercise, with no final rest.</li>
         </ol>
         <p>A short beep marks phase changes. A longer, lower tone marks completion.</p>
-        <p>Pause holds your place. Reset returns to the beginning, ready to start.</p>
+        <p>Reset returns to the beginning using your chosen settings. Refreshing the page restores the defaults.</p>
         <p>On your iPhone, try again with YouTube music playing. Keep this page visible and the screen unlocked.</p>
       </section>
       <section aria-labelledby="sound-heading">
