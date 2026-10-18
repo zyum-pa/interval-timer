@@ -24,7 +24,7 @@ Treat this as a guided course in product and software development. Before each l
 
 ## Current status
 
-Lesson 6: preparing a public GitHub Pages address so the timer can open on the iPhone independently of the PC. Publishing is currently blocked: GitHub reports that the current plan does not support Pages for this private repository. The repository's visibility has not been changed, and the website is not live yet.
+Lesson 6: the timer is published at **[https://zyum-pa.github.io/interval-timer/](https://zyum-pa.github.io/interval-timer/)**. GitHub serves the website independently of the development PC. HTTPS is enabled. The publishing workflow and a browser workout check passed; the iPhone test with the PC off is pending.
 
 The user confirmed that Lesson 5's starting countdown and final-five-second cues worked on the iPhone with YouTube playing. The preceding settings, workout, countdown, and sound-button tests were also confirmed. Offline use and Home Screen installation remain for the next milestone.
 
@@ -32,16 +32,24 @@ The user confirmed that Lesson 5's starting countdown and final-five-second cues
 
 The publishing instructions are saved in `.github/workflows/pages.yml`. They use GitHub's official Pages actions to check the existing workout tests and publish only `public/`. README files, tests, and Git history are not part of the deployed website files. Making the repository public would separately make the repository's contents and commit history visible on GitHub.
 
-GitHub Pages must first be available and enabled for this repository, using **GitHub Actions** as its source. The current private repository is not eligible under the current plan; changing its visibility requires the user's decision.
+The source repository is public, and GitHub Pages is enabled with **GitHub Actions** as its source. The site uses the existing GitHub account without an additional hosting account or a paid plan.
 
-After hosting is enabled, publish deliberately from the repository's **Actions** tab: select **Publish timer to GitHub Pages**, then **Run workflow** on `main`. Saving a Git checkpoint does not by itself trigger publication. A successful publishing run provides the verified website address.
+To publish app changes, open the repository's **Actions** tab: select **Publish timer to GitHub Pages**, then **Run workflow** on `main`. Saving a Git checkpoint does not by itself trigger publication. The successful initial publishing run checked all 25 workout tests and deployed the files from `public/`.
+
+## Commit email privacy
+
+Before publication, the original eight checkpoints were recreated with GitHub's privacy-protecting `noreply` email address. Their messages, dates, parent relationships, and file versions were preserved; commit identifiers changed. This local project's Git configuration also uses the privacy address for future commits.
+
+Because GitHub can retain old commit records after a rewrite, the original repository was retained as an archived **private** backup. A fresh repository containing only the cleaned history was published under the original `interval-timer` name. Anonymous checks confirmed that all eight original commits are unavailable through the public repository, while the eight cleaned checkpoints are visible with privacy-protecting author and committer addresses. A separate local history backup was saved outside the project folder.
+
+Reference: [GitHub's history-cleanup limitations](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/removing-sensitive-data-from-a-repository).
 
 References: [GitHub Pages workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages), [HTTPS support](https://docs.github.com/en/pages/getting-started-with-github-pages/securing-your-github-pages-site-with-https).
 
 ## Verify hosting after publication
 
-1. Open the verified public HTTPS address on the iPhone, then turn the PC off.
-2. Reload the page while connected to the internet. It must load independently of the PC.
+1. On the iPhone, open **https://zyum-pa.github.io/interval-timer/** in Safari. Then turn the PC off.
+2. Reload the public page while connected to the internet. It must load independently of the PC. Use the public address rather than the old home-Wi-Fi address.
 3. Choose **3** seconds exercise, **2** seconds rest, **3** rounds. Expect preparation followed by the full workout, finishing after **16 seconds** with no final rest.
 4. Check Pause/Resume, Reset, and the cues alongside YouTube, with the timer visible and the screen unlocked.
 
@@ -180,8 +188,15 @@ The YouTube app must already support playback while another app is visible for t
 
 ## Hosting preparation checkpoint — October 18, 2026
 
-- The repository is private. GitHub's Pages setup request returned: **Your current plan does not support GitHub Pages for this repository.**
-- A manual publishing workflow is prepared. No repository visibility change has been made, and no website has been published.
-- Awaiting the user's decision about making the source repository public or choosing another route.
+- Initially, the repository was private. GitHub's Pages setup request returned: **Your current plan does not support GitHub Pages for this repository.**
+- A manual publishing workflow was prepared and saved. The user subsequently authorized cleaning the commit email history and public publication.
+
+## Public hosting checkpoint — October 18, 2026
+
+- Cleaned all eight existing checkpoints and configured future local project commits to use the GitHub privacy email. The original history remains in private backups.
+- Published the cleaned repository publicly under its original name, with all original private commits checked as inaccessible through the public repository.
+- GitHub Pages is live at **https://zyum-pa.github.io/interval-timer/** with HTTPS enforced.
+- The publishing workflow passed all 25 behaviour tests and deployed the website successfully. A workout on the live website completed without browser errors.
+- This checkpoint changes hosting and privacy metadata, not the timer's behaviour. iPhone verification with the development PC off is pending. Offline use and Home Screen installation remain for the next milestone.
 
 Pause here for the user's test before adding further timer features.
