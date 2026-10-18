@@ -24,6 +24,10 @@ let finishAt = 0;
 let updateInterval;
 let timerState = "ready";
 let audioContext;
+const preparationMs = 3_000;
+let lastCueSecond;
+let audioRunId = 0;
+const activeWorkoutTones = new Set();
 
 function buildWorkout(values) {
   const phases = [];
@@ -56,6 +60,7 @@ function applySettings() {
     workout = buildWorkout(settings);
     phaseIndex = 0;
     remainingMs = workout[0].durationMs;
+    lastCueSecond = undefined;
   }
   renderTimer();
 }
@@ -105,6 +110,7 @@ function playBeep({ frequency = 880, duration = 0.25, onFinished = () => {} } = 
   };
   tone.start(start);
   tone.stop(start + duration);
+  return tone;
 }
 
 function renderTimer() {
@@ -113,8 +119,9 @@ function renderTimer() {
   const minutesText = String(Math.floor(seconds / 60)).padStart(2, "0");
   const secondsText = String(seconds % 60).padStart(2, "0");
   timeDisplay.textContent = settingsValid ? `${minutesText}:${secondsText}` : "--:--";
-  const phase = timerState === "finished" ? "Complete" : workout[phaseIndex].phase;
-  const round = settingsValid ? `Round ${workout[phaseIndex].round} of ${settings.rounds}` : "Round —";
+  const currentPhase = phaseIndex === -1 ? { phase: "Get ready", round: 1 } : workout[phaseIndex];
+  const phase = timerState === "finished" ? "Complete" : currentPhase.phase;
+  const round = settingsValid ? `Round ${currentPhase.round} of ${settings.rounds}` : "Round —";
   // Update announcements only when the phase or round actually changes.
   if (phaseDisplay.textContent !== phase) phaseDisplay.textContent = phase;
   if (roundDisplay.textContent !== round) roundDisplay.textContent = round;
@@ -140,13 +147,25 @@ function renderTimer() {
 function stopUpdates() {
   clearInterval(updateInterval);
   updateInterval = undefined;
+  audioRunId += 1;
+  for (const tone of activeWorkoutTones) tone.stop();
+  activeWorkoutTones.clear();
 }
 
-function playWorkoutCue(completed = false) {
+function playWorkoutCue(kind = "phase") {
+  const sounds = {
+    tick: { frequency: 1100, duration: 0.08 },
+    phase: { frequency: 880, duration: 0.25 },
+    complete: { frequency: 660, duration: 0.75 },
+  };
   try {
-    playBeep(completed ? { frequency: 660, duration: 0.75 } : {});
+    // A phase cue takes over cleanly even if a late tick is still sounding.
+    for (const tone of activeWorkoutTones) tone.stop();
+    activeWorkoutTones.clear();
+    const tone = playBeep({ ...sounds[kind], onFinished: () => activeWorkoutTones.delete(tone) });
+    activeWorkoutTones.add(tone);
   } catch (error) {
-    const event = completed ? "Workout finished" : "Phase changed";
+    const event = kind === "complete" ? "Workout finished" : "Workout continues";
     soundStatus.textContent = `${event}, but sound was unavailable. Try the sound test.`;
     console.warn("Workout sound failed.", error);
   }
@@ -163,7 +182,7 @@ function updateCountdown() {
       remainingMs = 0;
       stopUpdates();
       timerState = "finished";
-      playWorkoutCue(true);
+      playWorkoutCue("complete");
       renderTimer();
       return;
     }
@@ -173,14 +192,30 @@ function updateCountdown() {
   }
 
   remainingMs = finishAt - now;
+  const seconds = Math.ceil(remainingMs / 1000);
   // If updates were delayed, cue the current phase once, without old cues.
-  if (phaseChanged) playWorkoutCue();
+  if (phaseChanged) {
+    playWorkoutCue("phase");
+    // The opening phase cue replaces the tick for a short phase's first second.
+    lastCueSecond = seconds;
+  } else if (seconds !== lastCueSecond) {
+    lastCueSecond = seconds;
+    if (phaseIndex === -1 || seconds <= 5) playWorkoutCue("tick");
+  }
   renderTimer();
 }
 
-function runCountdown() {
+function runCountdown(starting = false) {
+  const runId = ++audioRunId;
   // Audio preparation must not delay the timer or undo a Reset click.
-  prepareAudio().catch((error) => {
+  prepareAudio().then(() => {
+    // Play the opening "3" only while that same starting countdown is active.
+    if (starting && runId === audioRunId && timerState === "running" && phaseIndex === -1
+        && Math.ceil((finishAt - performance.now()) / 1000) === 3) {
+      playWorkoutCue("tick");
+    }
+  }).catch((error) => {
+    if (runId !== audioRunId) return;
     soundStatus.textContent = "The workout will continue, but sound could not start. Try the sound test.";
     console.warn("Workout audio could not start.", error);
   });
@@ -194,7 +229,11 @@ startButton.addEventListener("click", () => {
   if (timerState !== "ready" && timerState !== "finished") return;
   applySettings();
   if (!settingsValid) return;
-  runCountdown();
+  stopUpdates();
+  phaseIndex = -1;
+  remainingMs = preparationMs;
+  lastCueSecond = 3;
+  runCountdown(true);
 });
 
 pauseButton.addEventListener("click", () => {

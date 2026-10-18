@@ -44,7 +44,15 @@ function createPage({ audioAllowed = true } = {}) {
         connect() {},
         disconnect() {},
         start(at) { cue.start = at; cue.frequency = this.frequency.value; cues.push(cue); },
-        stop(at) { cue.duration = at - cue.start; queueMicrotask(() => this.onended?.()); },
+        stop(at) {
+          if (at === undefined) {
+            cue.cancelledAt = now / 1000;
+            this.onended?.();
+          } else {
+            cue.duration = at - cue.start;
+            queueMicrotask(() => this.onended?.());
+          }
+        },
       };
     }
     createGain() {
@@ -95,10 +103,15 @@ function expectDisplay(page, phase, round, time, status, totalRounds = 2) {
   assert.equal(page.text("timer-status"), status);
 }
 
-test("25-second workout follows the correct phases and skips final rest", () => {
+function startExercise(page) {
+  page.click("start-button");
+  page.advance(3_000);
+}
+
+test("28-second workout includes preparation, correct phases, and no final rest", () => {
   const page = createPage();
   expectDisplay(page, "Exercise", 1, "00:10", "Ready");
-  page.click("start-button");
+  startExercise(page);
   assert.equal(page.enabled("start-button"), false);
   page.advance(10_000);
   expectDisplay(page, "Rest", 1, "00:05", "Running");
@@ -109,17 +122,17 @@ test("25-second workout follows the correct phases and skips final rest", () => 
   assert.equal(page.enabled("start-button"), true);
   assert.equal(page.enabled("pause-button"), false);
   assert.deepEqual(page.cues.map((cue) => [cue.frequency, cue.duration]), [
-    [880, 0.25], [880, 0.25], [660, 0.75],
+    [880, 0.25], [880, 0.25], [880, 0.25], [660, 0.75],
   ]);
   page.advance(30_000);
-  assert.equal(page.cues.length, 3, "completion must happen only once");
-  page.click("start-button");
+  assert.equal(page.cues.length, 4, "completion must happen only once");
+  startExercise(page);
   expectDisplay(page, "Exercise", 1, "00:10", "Running");
 });
 
 test("Pause preserves fractional exercise time and Resume keeps the same round", () => {
   const page = createPage();
-  page.click("start-button");
+  startExercise(page);
   page.advance(2_300);
   page.click("pause-button");
   page.advance(30_000);
@@ -134,7 +147,7 @@ test("Pause preserves fractional exercise time and Resume keeps the same round",
 
 test("Pause during rest preserves the rest before starting round two", () => {
   const page = createPage();
-  page.click("start-button");
+  startExercise(page);
   page.advance(11_000);
   page.click("pause-button");
   page.advance(30_000);
@@ -148,7 +161,7 @@ test("Reset from every phase, running or paused, cancels the old workout", () =>
   for (const elapsed of [2_500, 11_000, 16_000]) {
     for (const paused of [false, true]) {
       const page = createPage();
-      page.click("start-button");
+      startExercise(page);
       page.advance(elapsed);
       if (paused) page.click("pause-button");
       page.click("reset-button");
@@ -163,27 +176,27 @@ test("Reset from every phase, running or paused, cancels the old workout", () =>
 
 test("A late update catches up without extending the workout or replaying old cues", () => {
   const page = createPage();
-  page.click("start-button");
+  startExercise(page);
   page.advance(16_000);
   expectDisplay(page, "Exercise", 2, "00:09", "Running");
-  assert.equal(page.cues.length, 1);
+  assert.equal(page.cues.length, 2);
   page.advance(9_000);
   expectDisplay(page, "Complete", 2, "00:00", "Finished");
 });
 
 test("Pause at the finish cannot turn a completed workout into a paused one", () => {
   const page = createPage();
-  page.click("start-button");
+  startExercise(page);
   page.advance(25_000, false);
   page.click("pause-button");
   expectDisplay(page, "Complete", 2, "00:00", "Finished");
-  assert.equal(page.cues.length, 1);
-  assert.equal(page.cues[0].duration, 0.75);
+  assert.equal(page.cues.length, 2);
+  assert.equal(page.cues[1].duration, 0.75);
 });
 
 test("Unavailable audio does not prevent visual workout completion", async () => {
   const page = createPage({ audioAllowed: false });
-  page.click("start-button");
+  startExercise(page);
   await Promise.resolve();
   await Promise.resolve();
   page.advance(25_000);
@@ -205,11 +218,11 @@ function configure(page, exercise = 3, rest = 2, rounds = 3) {
   page.change("rounds", rounds);
 }
 
-test("Chosen 3/2/3 settings produce a 13-second workout and correct round labels", () => {
+test("Chosen 3/2/3 settings produce a 16-second workout including preparation", () => {
   const page = createPage();
   configure(page);
   expectDisplay(page, "Exercise", 1, "00:03", "Ready", 3);
-  page.click("start-button");
+  startExercise(page);
   page.advance(3_000);
   expectDisplay(page, "Rest", 1, "00:02", "Running", 3);
   page.advance(2_000);
@@ -220,23 +233,23 @@ test("Chosen 3/2/3 settings produce a 13-second workout and correct round labels
   expectDisplay(page, "Exercise", 3, "00:03", "Running", 3);
   page.advance(3_000);
   expectDisplay(page, "Complete", 3, "00:00", "Finished", 3);
-  assert.equal(page.cues.length, 5);
+  assert.equal(page.cues.length, 6);
 });
 
 test("One round finishes after one exercise and never enters rest", () => {
   const page = createPage();
   configure(page, 4, 99, 1);
-  page.click("start-button");
+  startExercise(page);
   page.advance(4_000);
   expectDisplay(page, "Complete", 1, "00:00", "Finished", 1);
-  assert.equal(page.cues.length, 1);
-  assert.equal(page.cues[0].duration, 0.75);
+  assert.equal(page.cues.length, 2);
+  assert.equal(page.cues[1].duration, 0.75);
 });
 
 test("Settings lock while running or paused; Reset keeps choices and unlocks them", () => {
   const page = createPage();
   configure(page);
-  page.click("start-button");
+  startExercise(page);
   page.advance(3_500);
   for (const id of ["exercise-seconds", "rest-seconds", "rounds"]) {
     assert.equal(page.enabled(id), false);
@@ -286,7 +299,7 @@ test("Times longer than a minute display minutes and seconds", () => {
   const page = createPage();
   configure(page, 61, 75, 2);
   expectDisplay(page, "Exercise", 1, "01:01", "Ready");
-  page.click("start-button");
+  startExercise(page);
   page.advance(61_000);
   expectDisplay(page, "Rest", 1, "01:15", "Running");
 });
@@ -294,12 +307,12 @@ test("Times longer than a minute display minutes and seconds", () => {
 test("Editing after completion previews a fresh workout using the new settings", () => {
   const page = createPage();
   configure(page, 1, 1, 1);
-  page.click("start-button");
+  startExercise(page);
   page.advance(1_000);
   assert.equal(page.enabled("exercise-seconds"), true);
   page.change("exercise-seconds", 4);
   expectDisplay(page, "Exercise", 1, "00:04", "Ready", 1);
-  page.click("start-button");
+  startExercise(page);
   page.advance(4_000);
   expectDisplay(page, "Complete", 1, "00:00", "Finished", 1);
 });
@@ -309,7 +322,171 @@ test("Maximum supported settings stay valid and complete after the chosen durati
   configure(page, 3600, 3600, 99);
   expectDisplay(page, "Exercise", 1, "60:00", "Ready", 99);
   assert.equal(page.enabled("start-button"), true);
-  page.click("start-button");
+  startExercise(page);
   page.advance((99 + 98) * 3600 * 1000);
   expectDisplay(page, "Complete", 99, "00:00", "Finished", 99);
+});
+
+async function settleAudio() {
+  // Let the browser-like audio preparation promise finish before checking its cue.
+  await new Promise(setImmediate);
+}
+
+test("Preparation shows and cues 3, 2, 1, then begins the full exercise", async () => {
+  const page = createPage();
+  page.click("start-button");
+  await settleAudio();
+  expectDisplay(page, "Get ready", 1, "00:03", "Running");
+  assert.equal(page.enabled("exercise-seconds"), false);
+  page.advance(1_000);
+  expectDisplay(page, "Get ready", 1, "00:02", "Running");
+  page.advance(1_000);
+  expectDisplay(page, "Get ready", 1, "00:01", "Running");
+  page.advance(1_000);
+  expectDisplay(page, "Exercise", 1, "00:10", "Running");
+  assert.deepEqual(page.cues.map((cue) => [cue.start, cue.frequency]), [
+    [0, 1100], [1, 1100], [2, 1100], [3, 880],
+  ]);
+  for (const cue of page.cues.slice(0, 3)) {
+    assert.ok(Math.abs(cue.duration - 0.08) < 0.000001);
+  }
+});
+
+test("Long exercise and rest each tick at their final five seconds, once per second", () => {
+  const page = createPage();
+  configure(page, 8, 7, 2);
+  startExercise(page);
+  page.advance(3_000);
+  for (let second = 4; second >= 1; second -= 1) page.advance(1_000);
+  assert.deepEqual(page.cues.filter((cue) => cue.frequency === 1100).map((cue) => cue.start), [6, 7, 8, 9, 10]);
+  page.advance(1_000);
+  expectDisplay(page, "Rest", 1, "00:07", "Running");
+  page.advance(2_000);
+  for (let second = 4; second >= 1; second -= 1) page.advance(1_000);
+  assert.deepEqual(page.cues.filter((cue) => cue.frequency === 1100).map((cue) => cue.start), [6, 7, 8, 9, 10, 13, 14, 15, 16, 17]);
+  const cueCount = page.cues.length;
+  page.advance(0);
+  page.advance(0);
+  assert.equal(page.cues.length, cueCount);
+  page.advance(1_000);
+  expectDisplay(page, "Exercise", 2, "00:08", "Running");
+});
+
+test("One-, three-, and five-second phases use the opening cue without a duplicate tick", () => {
+  for (const duration of [1, 3, 5]) {
+    const page = createPage();
+    configure(page, duration, duration, 2);
+    startExercise(page);
+    for (let phase = 0; phase < 3; phase += 1) {
+      for (let second = 1; second <= duration; second += 1) page.advance(1_000);
+    }
+    expectDisplay(page, "Complete", 2, "00:00", "Finished");
+    assert.equal(page.cues.filter((cue) => cue.frequency === 880).length, 3);
+    assert.equal(page.cues.filter((cue) => cue.frequency === 1100).length, 3 * (duration - 1));
+    assert.equal(page.cues.filter((cue) => cue.frequency === 660).length, 1);
+    assert.equal(new Set(page.cues.map((cue) => cue.start)).size, page.cues.length);
+  }
+});
+
+test("Pause during preparation preserves fractions and Resume does not restart at three", async () => {
+  const page = createPage();
+  page.click("start-button");
+  await settleAudio();
+  page.advance(1_300);
+  page.click("pause-button");
+  const cueCount = page.cues.length;
+  page.advance(30_000);
+  expectDisplay(page, "Get ready", 1, "00:02", "Paused");
+  assert.equal(page.cues.length, cueCount);
+  page.click("pause-button");
+  await settleAudio();
+  assert.equal(page.cues.length, cueCount, "Resume must not repeat the current tick");
+  page.advance(699);
+  expectDisplay(page, "Get ready", 1, "00:02", "Running");
+  page.advance(1);
+  expectDisplay(page, "Get ready", 1, "00:01", "Running");
+  page.advance(1_000);
+  expectDisplay(page, "Exercise", 1, "00:10", "Running");
+});
+
+test("Pause during the final five seconds holds cues without replaying one on Resume", async () => {
+  const page = createPage();
+  configure(page, 6, 2, 1);
+  startExercise(page);
+  page.advance(1_000);
+  page.click("pause-button");
+  const cueCount = page.cues.length;
+  page.advance(10_000);
+  expectDisplay(page, "Exercise", 1, "00:05", "Paused", 1);
+  assert.equal(page.cues.length, cueCount);
+  page.click("pause-button");
+  await settleAudio();
+  assert.equal(page.cues.length, cueCount);
+  page.advance(999);
+  assert.equal(page.cues.length, cueCount);
+  page.advance(1);
+  assert.equal(page.cues.length, cueCount + 1);
+  expectDisplay(page, "Exercise", 1, "00:04", "Running", 1);
+});
+
+test("Reset during preparation prevents late audio and keeps chosen settings", async () => {
+  const page = createPage();
+  configure(page);
+  page.click("start-button");
+  page.click("reset-button");
+  await settleAudio();
+  page.advance(30_000);
+  expectDisplay(page, "Exercise", 1, "00:03", "Ready", 3);
+  assert.equal(page.cues.length, 0);
+  assert.equal(page.value("exercise-seconds"), "3");
+  assert.equal(page.enabled("exercise-seconds"), true);
+});
+
+test("Quick Start, Reset, Start cannot play the old countdown's pending opening tick", async () => {
+  const page = createPage();
+  page.click("start-button");
+  page.click("reset-button");
+  page.click("start-button");
+  await settleAudio();
+  expectDisplay(page, "Get ready", 1, "00:03", "Running");
+  assert.equal(page.cues.length, 1);
+});
+
+test("Late updates cue only the current final second and never burst missed ticks", () => {
+  const page = createPage();
+  configure(page, 8, 2, 1);
+  startExercise(page);
+  page.advance(6_200);
+  expectDisplay(page, "Exercise", 1, "00:02", "Running", 1);
+  assert.equal(page.cues.filter((cue) => cue.frequency === 1100).length, 1);
+  page.advance(0);
+  assert.equal(page.cues.filter((cue) => cue.frequency === 1100).length, 1);
+  page.advance(800);
+  assert.equal(page.cues.filter((cue) => cue.frequency === 1100).length, 2);
+  page.advance(1_000);
+  expectDisplay(page, "Complete", 1, "00:00", "Finished", 1);
+});
+
+test("Reset immediately stops a currently playing automatic phase cue", () => {
+  const page = createPage();
+  startExercise(page);
+  const phaseCue = page.cues[0];
+  page.click("reset-button");
+  assert.equal(phaseCue.cancelledAt, 3);
+  const cueCount = page.cues.length;
+  page.advance(30_000);
+  assert.equal(page.cues.length, cueCount);
+});
+
+test("A phase change takes over a late tick without overlapping automatic sounds", () => {
+  const page = createPage();
+  configure(page, 6, 2, 2);
+  startExercise(page);
+  page.advance(5_990);
+  const tick = page.cues.at(-1);
+  assert.equal(tick.frequency, 1100);
+  page.advance(10);
+  expectDisplay(page, "Rest", 1, "00:02", "Running");
+  assert.equal(tick.cancelledAt, 9);
+  assert.equal(page.cues.at(-1).frequency, 880);
 });

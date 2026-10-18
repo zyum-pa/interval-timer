@@ -24,9 +24,9 @@ Treat this as a guided course in product and software development. Before each l
 
 ## Current status
 
-Lesson 4: adjustable exercise time, rest time, and number of rounds. Defaults remain ten seconds exercise, five seconds rest, and two rounds. Settings lock during running and paused workouts; Reset keeps the chosen values. Invalid entries block Start and show a field-specific explanation. Real iPhone verification of adjustable settings is pending.
+Lesson 5: a three-second starting countdown and final-five-second audio cues. Start shows **Get ready** at **00:03**, **00:02**, **00:01**, then starts the full first exercise. Short ticks count down, a stronger beep marks each exercise/rest start, and a longer, lower tone marks completion. Settings, phase and round labels, Pause/Resume, and Reset remain available. Real iPhone verification of the new cues is pending.
 
-The user confirmed that Lesson 3's two-round workout worked on the iPhone with YouTube playing. The preceding simple countdown and button-triggered sound tests were also confirmed.
+The user confirmed that Lesson 4's adjustable settings and Lesson 3's two-round workout worked on the iPhone with YouTube playing. The preceding simple countdown and button-triggered sound tests were also confirmed.
 
 ## Run the app
 
@@ -63,7 +63,7 @@ Keep the page visible and the screen unlocked during this test. Reload Safari to
 7. Start again, pause, then reset. Expect **00:10** and **Ready** again.
 8. On your iPhone, repeat with music playing in the YouTube app. Confirm that the automatic beep at zero is audible and that music continues.
 
-These are historical checks. The current page runs Lesson 4; use its checklist below.
+These are historical checks. The current page runs Lesson 5; use its checklist below.
 
 ## Historical Lesson 3 checks
 
@@ -79,7 +79,7 @@ Reload Safari and look for **Interval Timer · Lesson 3**. Keep the page visible
 
 Product decision: fixed short times make the complete sequence quick to test before adjustable settings are introduced. The separate sound-test button remains available to diagnose audio independently of the workout. The three-second preparation countdown and final-five-second cues are later milestones.
 
-## Verify Lesson 4
+## Historical Lesson 4 checks
 
 Reload Safari and look for **Interval Timer · Lesson 4**. Keep the page visible and the screen unlocked.
 
@@ -95,13 +95,28 @@ Reload Safari and look for **Interval Timer · Lesson 4**. Keep the page visible
 
 Product decisions: whole seconds and positive round counts keep setup straightforward. Visible limits of 1–3,600 seconds per phase and 1–99 rounds catch accidental oversized entries and keep generated workouts small. Changes apply between workouts, and Reset retains the user's choices. Remembering settings after refreshing or closing the page is a later lesson. No new packages were added.
 
+## Verify Lesson 5
+
+Reload Safari and look for **Interval Timer · Lesson 5**. Keep the page visible and the screen unlocked.
+
+1. Choose **8** seconds exercise, **7** seconds rest, **2** rounds. Tap Start: expect **Get ready**, **Round 1 of 2**, and **00:03 → 00:02 → 00:01**, with three short ticks. Then expect the exercise opening cue and the full **00:08** exercise period.
+2. In exercise, expect one short tick at **5, 4, 3, 2, 1** seconds remaining, then the stronger rest-opening cue. In rest, expect another five ticks before the next exercise-opening cue.
+3. There is no new preparation countdown before rest or round two. After the last exercise, expect the distinct completion tone and no final rest. This uninterrupted test totals **26 seconds**, including the three-second preparation.
+4. Try **3** seconds exercise, **2** seconds rest, **3** rounds. It now totals **16 seconds** including preparation. Each short phase's opening cue replaces its first tick; subsequent seconds get ticks. There must be no doubled sounds at phase starts.
+5. Try **1** second exercise and **1** round. Expect three seconds of preparation, the exercise-opening cue, one full second of exercise, then completion. There is no rest or extra tick at exercise start.
+6. Pause during **Get ready**. Wait: the phase, time, and sounds must hold. Resume continues from that point without returning to three or repeating the current second's tick. Repeat a pause during a phase's final five seconds.
+7. Reset during preparation and during a phase's final five seconds. Expect the initial ready screen with your choices preserved and no further automatic cues from the cancelled run. Starting again must begin a new three-second preparation.
+8. Repeat on the iPhone with YouTube music playing. Check that ticks, phase-change cues, and completion are easy to tell apart, and that music continues.
+
+Product decisions: preparation occurs once and adds time instead of shortening exercise. Each sound has a specific meaning. Phases of five seconds or less use the opening phase cue in place of that second's tick. Pause and Reset cancel automatic sounds; Resume preserves your place. Late browser updates cue the current moment instead of replaying missed seconds, and phase cues take over any late tick cleanly. No new packages were added.
+
 ## Repeatable behaviour checks
 
 ```powershell
 node --test tests/workout.test.cjs
 ```
 
-These checks use Node's built-in tools and add no packages. They cover the full sequence, skipping final rest, distinct cues, pause/resume in both phases, resetting in every phase, delayed updates, replay, visual completion when audio is unavailable, chosen settings, one-round workouts, validation, locking, and minute formatting. They use a controlled clock and stand-ins for the browser's sound tools, so they do not establish actual iPhone audio compatibility or visual layout.
+These checks use Node's built-in tools and add no packages. They cover the workout sequence, settings, validation, control behaviour, preparation timing, cue timing in both phases, short phases, cancellation, quick restarts, delayed updates, and sound overlap. They use a controlled clock and stand-ins for the browser's sound tools, so they do not establish actual iPhone audio compatibility or visual layout.
 
 The app continues to run entirely in the browser. The local development server only serves the files; it does not manage workouts or store data.
 
@@ -136,6 +151,12 @@ The YouTube app must already support playback while another app is visible for t
 
 - Fifteen repeatable behaviour checks passed, covering the earlier workout behaviour and the new settings.
 - Browser verification includes preview updates, setting locks, Reset preserving choices, workout completion, input validation, and mobile layout.
-- Real iPhone verification of adjustable settings is pending.
+- The user subsequently confirmed that adjustable settings worked on the iPhone with YouTube playing.
+
+## Lesson 5 checkpoint — October 18, 2026
+
+- Twenty-five repeatable behaviour checks passed. The earlier workout and settings checks were updated to account for the additional three-second preparation.
+- Browser verification covers the preparation display, pausing and resuming preparation, workout transitions and completion, and mobile layout.
+- Real iPhone verification of the new cues alongside YouTube is pending.
 
 Pause here for the user's test before adding further timer features.
