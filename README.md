@@ -21,7 +21,9 @@ Treat this as a guided course in product and software development. Before each l
 
 The timer is published at **[https://zyum-pa.github.io/interval-timer/](https://zyum-pa.github.io/interval-timer/)**. GitHub serves the website independently of the development PC. HTTPS is enabled. The user confirmed that the published timer works on the iPhone.
 
-Current milestone: Lesson 8, offline use. After an online visit saves all required files, the app confirms **Ready for offline use**. It can then reopen from its saved copy without internet. The actual iPhone offline test is pending.
+The first version is complete for the intended personal iPhone setup. The user confirmed offline operation on the iPhone, sound alongside YouTube after reconnecting, and correct operation with music both on and off. The screen stayed undimmed during the tested workout and dimmed only after the workout stopped.
+
+After an online visit saves all required files, the app confirms **Ready for offline use**. It can then reopen from its saved copy without internet. The current app remains Lesson 8; this completion checkpoint updates project notes only.
 
 The user confirmed that the Home Screen version works on the iPhone with YouTube playing. The existing icon and app identity are retained; there is no need to reinstall it for this lesson.
 
@@ -257,6 +259,11 @@ The YouTube app must already support playback while another app is visible for t
 - All 36 automated checks passed, including 11 new offline checks. New scripts also passed syntax checks.
 - In an isolated desktop browser check, the app was closed and reopened with its local web server stopped. Settings, Pause/Resume, workout completion, Reset, and the test-sound button worked from saved files.
 - A separate temporary update downloaded while a workout was paused. The old page and paused time stayed intact, Resume completed the workout with the server stopped again, and the saved new version appeared only after both old timer windows were closed. The new version also opened with the server stopped. These checks used the same project-folder URL structure as GitHub Pages.
-- Real iPhone offline verification is pending. Pause for the user's test before further changes.
+- The user subsequently confirmed that the timer worked offline on the iPhone and that sounds still worked with YouTube after reconnecting.
 
-Pause here for the user's test before adding further timer features.
+## First-version completion checkpoint — October 18, 2026
+
+- The user reported that the app runs correctly with YouTube both on and off. During the tested workout the screen did not dim; it dimmed only after the workout stopped.
+- Combined with the earlier feature, Home Screen, and offline confirmations, this meets the first-version goals for the user's tested setup. No workout duration or additional device/iOS coverage is inferred from the report.
+- This records observed screen behavior, not a new screen-wake feature or a guarantee for other phone settings. The app code is unchanged; the preceding 36 automated checks remain the latest code verification.
+- Stop adding features for this version. Further lessons or improvements should follow the user's experience and priorities.
