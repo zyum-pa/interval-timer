@@ -3,28 +3,36 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Interval Timer · Sound test</title>
+    <title>Interval Timer · Simple countdown</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css">
     <script src="app.js" defer></script>
   </head>
   <body>
     <main>
-      <p class="eyebrow">Interval Timer · Lesson 1</p>
-      <h1>Let’s test sound.</h1>
-      <p>Tap the button to play one short beep.</p>
-      <button id="sound-button" type="button">Play test sound</button>
-      <p id="sound-status" role="status">Ready when you are.</p>
-      <section aria-labelledby="iphone-test-heading">
-        <h2 id="iphone-test-heading">Try it with your music</h2>
+      <p class="eyebrow">Interval Timer · Lesson 2</p>
+      <h1>A simple countdown.</h1>
+      <p>Ten seconds. One beep at the finish.</p>
+      <p id="time-display" role="timer" aria-label="Time remaining">00:10</p>
+      <p id="timer-status" role="status">Ready</p>
+      <div class="controls" aria-label="Countdown controls">
+        <button id="start-button" type="button">Start</button>
+        <button id="pause-button" type="button" disabled>Pause</button>
+        <button id="reset-button" class="secondary" type="button">Reset</button>
+      </div>
+      <section aria-labelledby="test-heading">
+        <h2 id="test-heading">Try the controls</h2>
         <ol>
-          <li>On your iPhone, turn Silent Mode off and set a comfortable volume.</li>
-          <li>Tap the button once without music.</li>
-          <li>Start music in the YouTube app, then return to this page.</li>
-          <li>With the page visible and screen unlocked, tap the button again.</li>
+          <li>Start, then pause after a few seconds. The time should hold.</li>
+          <li>Resume to continue, or reset to return to ten seconds.</li>
+          <li>Let it reach zero. Listen for a beep and look for “Finished”.</li>
         </ol>
-        <p>Listen for the beep and check whether the music keeps playing.</p>
-        <p>If music stops before you tap, tell me that too.</p>
+        <p>On your iPhone, try again with YouTube music playing. Keep this page visible and the screen unlocked.</p>
+      </section>
+      <section aria-labelledby="sound-heading">
+        <h2 id="sound-heading">Check sound separately</h2>
+        <button id="sound-button" class="secondary" type="button">Play test sound</button>
+        <p id="sound-status" role="status">Turn Silent Mode off and choose a comfortable volume.</p>
       </section>
     </main>
   </body>
