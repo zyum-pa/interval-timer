@@ -98,7 +98,8 @@ function playBeep({ frequency = 880, duration = 0.25, onFinished = () => {} } = 
 
   tone.frequency.value = frequency;
   volume.gain.setValueAtTime(0, start);
-  volume.gain.linearRampToValueAtTime(0.2, start + 0.01);
+  // Stronger cues help them stand out over music; retain a short fade to avoid clicks.
+  volume.gain.linearRampToValueAtTime(0.6, start + 0.01);
   volume.gain.linearRampToValueAtTime(0, start + duration);
 
   tone.connect(volume);

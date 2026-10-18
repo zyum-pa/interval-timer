@@ -24,7 +24,9 @@ Treat this as a guided course in product and software development. Before each l
 
 ## Current status
 
-Lesson 6: the timer is published at **[https://zyum-pa.github.io/interval-timer/](https://zyum-pa.github.io/interval-timer/)**. GitHub serves the website independently of the development PC. HTTPS is enabled. The publishing workflow and a browser workout check passed; the iPhone test with the PC off is pending.
+The timer is published at **[https://zyum-pa.github.io/interval-timer/](https://zyum-pa.github.io/interval-timer/)**. GitHub serves the website independently of the development PC. HTTPS is enabled. The user confirmed that the published timer works on the iPhone.
+
+Current small milestone: louder sounds before Home Screen and offline work. The user reported that cues were difficult to hear over YouTube. The shared tone level is increased from 0.2 to 0.6, with the same frequencies, durations, and short fade. This triples the generated signal amplitude, not perceived loudness. Actual loudness still depends on the phone and its media volume. No new packages or controls are added. The louder-cue iPhone test is pending.
 
 The user confirmed that Lesson 5's starting countdown and final-five-second cues worked on the iPhone with YouTube playing. The preceding settings, workout, countdown, and sound-button tests were also confirmed. Offline use and Home Screen installation remain for the next milestone.
 
@@ -197,6 +199,13 @@ The YouTube app must already support playback while another app is visible for t
 - Published the cleaned repository publicly under its original name, with all original private commits checked as inaccessible through the public repository.
 - GitHub Pages is live at **https://zyum-pa.github.io/interval-timer/** with HTTPS enforced.
 - The publishing workflow passed all 25 behaviour tests and deployed the website successfully. A workout on the live website completed without browser errors.
-- This checkpoint changes hosting and privacy metadata, not the timer's behaviour. iPhone verification with the development PC off is pending. Offline use and Home Screen installation remain for the next milestone.
+- This checkpoint changes hosting and privacy metadata, not the timer's behaviour. The user subsequently confirmed that the published timer works on the iPhone. Offline use and Home Screen installation remain for the next milestone.
+
+## Louder cues checkpoint — October 18, 2026
+
+- Increased the shared tone level for preparation ticks, final-five-second ticks, phase changes, completion, and the sound-test button. Workout timing and mixed-audio configuration are unchanged.
+- All 25 existing workout checks and the JavaScript syntax check passed. These checks do not establish perceived volume on the iPhone.
+- Real iPhone verification is pending: reload the published page, play the test sound at a comfortable phone volume, then repeat with YouTube at the usual listening level. Run **8 seconds exercise / 7 seconds rest / 2 rounds** to hear all five warning ticks in each phase, phase changes, and completion. Confirm clear cues, no unpleasant distortion, and uninterrupted music.
+- Home Screen installation and offline support are planned as separate small milestones after this listening test.
 
 Pause here for the user's test before adding further timer features.
