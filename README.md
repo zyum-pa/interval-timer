@@ -13,10 +13,6 @@ A beginner learning project: a personal interval timer web app, developed on Win
 - Test audio early on the actual iPhone alongside music from the YouTube app, with the timer visible and the screen unlocked.
 - No accounts or backend.
 
-## Later
-
-- Offline use.
-
 ## Working approach
 
 Treat this as a guided course in product and software development. Before each lesson, explain the user benefit, product decisions, and success criteria, then pause for questions before changing files. Keep code details brief unless requested. Build one small increment, check it, and pause for the user's test. Save working checkpoints with Git and GitHub, distinguishing browser checks from real iPhone results.
@@ -25,7 +21,9 @@ Treat this as a guided course in product and software development. Before each l
 
 The timer is published at **[https://zyum-pa.github.io/interval-timer/](https://zyum-pa.github.io/interval-timer/)**. GitHub serves the website independently of the development PC. HTTPS is enabled. The user confirmed that the published timer works on the iPhone.
 
-Current milestone: Lesson 7, Home Screen installation. The page now has a name, green stopwatch icons, and launch settings for opening in its own app window. The actual iPhone installation and app-window audio test are pending. Internet is still needed; offline support is the next lesson.
+Current milestone: Lesson 8, offline use. After an online visit saves all required files, the app confirms **Ready for offline use**. It can then reopen from its saved copy without internet. The actual iPhone offline test is pending.
+
+The user confirmed that the Home Screen version works on the iPhone with YouTube playing. The existing icon and app identity are retained; there is no need to reinstall it for this lesson.
 
 The user confirmed that the louder sounds work well on the iPhone with YouTube playing. The shared tone level is 0.6, with the same frequencies, durations, and short fade as before. No new packages are added.
 
@@ -33,18 +31,40 @@ The user confirmed that Lesson 5's starting countdown and final-five-second cues
 
 ## Verify Lesson 7: Home Screen installation
 
-1. On the iPhone, open **https://zyum-pa.github.io/interval-timer/** in Safari and reload it. Look for **Interval Timer · Lesson 7**.
+These are historical installation checks. The user confirmed them; the current page is Lesson 8.
+
+1. On the iPhone, open **https://zyum-pa.github.io/interval-timer/** in Safari and reload it.
 2. Tap Safari's **Share** button, then **Add to Home Screen**. If shown, keep **Open as Web App** turned on. Keep the name **Interval Timer** and tap **Add**.
 3. On your Home Screen, expect a green icon with a white stopwatch. Tap it: the timer should open in its own app window without Safari's address bar.
 4. Keep the screen unlocked. Choose **8 seconds exercise / 7 seconds rest / 2 rounds** and run a workout. Expect the preparation countdown, warning ticks, phase changes, and completion without a final rest. Also try Pause/Resume and Reset.
 5. Start YouTube music, return to the timer through its Home Screen icon, and repeat. Confirm that music continues and the louder cues remain clear.
 6. Close the timer and reopen it from the icon while online. It should start ready with the usual defaults, not resume an old workout.
 
-Product decision: verify Home Screen use before adding offline support so any new audio or launch issue is easier to isolate. Installation does not yet provide offline operation. The phone still needs internet to open the app, and the timer should remain visible with the screen unlocked during workouts.
+Product decision: verify Home Screen use before adding offline support so any new audio or launch issue is easier to isolate. Lesson 7 initially required internet to open; Lesson 8 below adds saved offline files. The timer should remain visible with the screen unlocked during workouts.
 
-`public/manifest.webmanifest` is a small browser settings file for the name, icons, launch address, and app-window display. Its relative addresses stay inside the GitHub Pages `/interval-timer/` folder. Apple-specific page settings and a 180-pixel icon support iPhone Home Screen use; the manifest also includes 192- and 512-pixel icons. `tools/generate-icons.ps1` regenerates all icons on Windows using built-in drawing tools. No service worker, new account, or package is introduced.
+`public/manifest.webmanifest` is a small browser settings file for the name, icons, launch address, and app-window display. Its relative addresses stay inside the GitHub Pages `/interval-timer/` folder. Apple-specific page settings and a 180-pixel icon support iPhone Home Screen use; the manifest also includes 192- and 512-pixel icons. `tools/generate-icons.ps1` regenerates all icons on Windows using built-in drawing tools. Lesson 7 introduced no service worker, new account, or package.
 
 References: [Apple's Home Screen instructions](https://support.apple.com/en-lamr/guide/iphone/iphea86e5236/ios), [manifest launch address](https://developer.mozilla.org/en-US/docs/Web/Progressive_web_apps/Manifest/Reference/start_url).
+
+## Verify Lesson 8: offline use
+
+1. Keep internet on. Quit the Home Screen timer from the iPhone app switcher, then reopen it. Look for **Lesson 8** and wait for **Ready for offline use** near the top. Preparation must happen in the Home Screen app itself, even if Safari is already prepared.
+2. Quit the timer completely. Turn off both **Wi-Fi and mobile data** in Settings, then open the timer from its existing Home Screen icon.
+3. Expect the full page, normal controls, and **Ready for offline use**. Choose **8 seconds exercise / 7 seconds rest / 2 rounds**. Complete a workout with preparation ticks, final-five-second ticks, phase changes, and completion with no final rest.
+4. Try Pause/Resume and Reset offline. Settings should be editable between workouts. On another run, reset and wait: the cancelled workout must not continue.
+5. Reconnect to the internet, start YouTube music, then return to the timer through its icon and repeat a short workout. The louder cues should remain clear while music continues. Keep the timer visible and screen unlocked throughout.
+
+The timer is what works offline; this does not download YouTube music. Clearing website data or the phone removing saved website files can remove the offline copy. If the readiness message is missing or reports failure, reconnect and prepare the app again before relying on it. Saving the app does not preserve your workout settings after reopening.
+
+## Offline implementation and future updates
+
+`public/sw.js` is a service worker: a browser helper that saves and serves app files. `public/offline.js` registers that helper and displays its confirmed readiness independently of workout timing and sound. No packages or accounts were added. HTTPS is required on the phone; loopback addresses such as `http://127.0.0.1` also support local desktop checks. The old plain-HTTP home Wi-Fi address cannot verify offline setup on the iPhone.
+
+The worker saves one complete version of the HTML, CSS, JavaScript, manifest, and icons. It serves only these known app files from its versioned cache (the browser's saved file storage), including the folder's entry page. It does not save unrelated sites or other projects. A missing file causes installation to fail; readiness is shown only after the controlling worker checks that every required file is present.
+
+For every future app-file change, **increase the `v1` cache version in `public/sw.js`** as part of that checkpoint. Publish the whole `public/` folder together. A new worker downloads a separate complete copy and waits until all old timer windows, including Safari tabs, are closed. It never forces a refresh or takes over a running or paused workout. The message **Update saved** explains how to switch after finishing. Activation removes only this timer scope's old copies. A failed update leaves the previous version intact.
+
+Reference: [browser worker installation and updates](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers).
 
 ## Publish with GitHub Pages
 
@@ -71,7 +91,7 @@ References: [GitHub Pages workflows](https://docs.github.com/en/pages/getting-st
 3. Choose **3** seconds exercise, **2** seconds rest, **3** rounds. Expect preparation followed by the full workout, finishing after **16 seconds** with no final rest.
 4. Check Pause/Resume, Reset, and the cues alongside YouTube, with the timer visible and the screen unlocked.
 
-This milestone provides online hosting only. Opening the page still needs internet access until offline support is added. Record the iPhone result before continuing.
+This historical milestone established online hosting. The user confirmed it; use the Lesson 8 checklist above for offline verification.
 
 ## Run the app
 
@@ -108,7 +128,7 @@ Keep the page visible and the screen unlocked during this test. Reload Safari to
 7. Start again, pause, then reset. Expect **00:10** and **Ready** again.
 8. On your iPhone, repeat with music playing in the YouTube app. Confirm that the automatic beep at zero is audible and that music continues.
 
-These are historical checks. The current page is Lesson 7; the Lesson 5 workout checks below still apply.
+These are historical checks. The current page is Lesson 8; the Lesson 5 workout checks below still apply.
 
 ## Historical Lesson 3 checks
 
@@ -142,7 +162,7 @@ Product decisions: whole seconds and positive round counts keep setup straightfo
 
 ## Verify Lesson 5
 
-These workout checks still apply on the current Lesson 7 page. Keep the page visible and the screen unlocked.
+These workout checks still apply on the current Lesson 8 page. Keep the page visible and the screen unlocked.
 
 1. Choose **8** seconds exercise, **7** seconds rest, **2** rounds. Tap Start: expect **Get ready**, **Round 1 of 2**, and **00:03 → 00:02 → 00:01**, with three short ticks. Then expect the exercise opening cue and the full **00:08** exercise period.
 2. In exercise, expect one short tick at **5, 4, 3, 2, 1** seconds remaining, then the stronger rest-opening cue. In rest, expect another five ticks before the next exercise-opening cue.
@@ -158,10 +178,10 @@ Product decisions: preparation occurs once and adds time instead of shortening e
 ## Repeatable behaviour checks
 
 ```powershell
-node --test tests/workout.test.cjs
+node --test tests/*.test.cjs
 ```
 
-These checks use Node's built-in tools and add no packages. They cover the workout sequence, settings, validation, control behaviour, preparation timing, cue timing in both phases, short phases, cancellation, quick restarts, delayed updates, and sound overlap. They use a controlled clock and stand-ins for the browser's sound tools, so they do not establish actual iPhone audio compatibility or visual layout.
+These checks use Node's built-in tools and add no packages. They cover the workout sequence, settings, validation, control behaviour, preparation timing, cue timing in both phases, short phases, cancellation, quick restarts, delayed updates, and sound overlap. Offline checks also cover the complete saved file set, missing-file failure, serving files without network, scope isolation, update cleanup, preservation after failed updates, and honest readiness messages. They use controlled clocks and stand-ins for browser APIs, so actual worker lifecycle, iPhone audio, and layout need browser/device checks too.
 
 The app continues to run entirely in the browser. The local development server only serves the files; it does not manage workouts or store data.
 
@@ -229,6 +249,14 @@ The YouTube app must already support playback while another app is visible for t
 - Added Home Screen launch settings, a web app manifest, three green stopwatch icon sizes, and installation instructions on the page.
 - All 25 existing workout checks passed. Manifest launch addresses and PNG dimensions were checked. The 180-pixel iPhone icon was visually inspected.
 - At iPhone 12 screen dimensions in the desktop browser, the timer and installation instructions were readable. A short workout and the sound-test button completed without browser warnings or errors. This preview does not verify iPhone installation or app-window audio mixing.
-- The actual iPhone Home Screen launch and YouTube audio verification are pending. Pause for that result before adding offline support.
+- The user subsequently confirmed that the Home Screen version works on the iPhone with YouTube playing.
+
+## Lesson 8 checkpoint — October 18, 2026
+
+- Added saved offline app files, confirmed readiness, and updates that wait for old timer windows to close. Workout timing, settings, controls, and the louder cues are unchanged.
+- All 36 automated checks passed, including 11 new offline checks. New scripts also passed syntax checks.
+- In an isolated desktop browser check, the app was closed and reopened with its local web server stopped. Settings, Pause/Resume, workout completion, Reset, and the test-sound button worked from saved files.
+- A separate temporary update downloaded while a workout was paused. The old page and paused time stayed intact, Resume completed the workout with the server stopped again, and the saved new version appeared only after both old timer windows were closed. The new version also opened with the server stopped. These checks used the same project-folder URL structure as GitHub Pages.
+- Real iPhone offline verification is pending. Pause for the user's test before further changes.
 
 Pause here for the user's test before adding further timer features.

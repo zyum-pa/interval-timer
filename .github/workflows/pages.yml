@@ -25,8 +25,8 @@ jobs:
       - name: Get the saved project files
         uses: actions/checkout@v6
 
-      - name: Check workout behaviour
-        run: node --test tests/workout.test.cjs
+      - name: Check workout and offline behaviour
+        run: node --test tests/*.test.cjs
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
