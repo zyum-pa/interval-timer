@@ -24,9 +24,28 @@ Treat this as a guided course in product and software development. Before each l
 
 ## Current status
 
-Lesson 5: a three-second starting countdown and final-five-second audio cues. Start shows **Get ready** at **00:03**, **00:02**, **00:01**, then starts the full first exercise. Short ticks count down, a stronger beep marks each exercise/rest start, and a longer, lower tone marks completion. Settings, phase and round labels, Pause/Resume, and Reset remain available. Real iPhone verification of the new cues is pending.
+Lesson 6: preparing a public GitHub Pages address so the timer can open on the iPhone independently of the PC. Publishing is currently blocked: GitHub reports that the current plan does not support Pages for this private repository. The repository's visibility has not been changed, and the website is not live yet.
 
-The user confirmed that Lesson 4's adjustable settings and Lesson 3's two-round workout worked on the iPhone with YouTube playing. The preceding simple countdown and button-triggered sound tests were also confirmed.
+The user confirmed that Lesson 5's starting countdown and final-five-second cues worked on the iPhone with YouTube playing. The preceding settings, workout, countdown, and sound-button tests were also confirmed. Offline use and Home Screen installation remain for the next milestone.
+
+## Publish with GitHub Pages
+
+The publishing instructions are saved in `.github/workflows/pages.yml`. They use GitHub's official Pages actions to check the existing workout tests and publish only `public/`. README files, tests, and Git history are not part of the deployed website files. Making the repository public would separately make the repository's contents and commit history visible on GitHub.
+
+GitHub Pages must first be available and enabled for this repository, using **GitHub Actions** as its source. The current private repository is not eligible under the current plan; changing its visibility requires the user's decision.
+
+After hosting is enabled, publish deliberately from the repository's **Actions** tab: select **Publish timer to GitHub Pages**, then **Run workflow** on `main`. Saving a Git checkpoint does not by itself trigger publication. A successful publishing run provides the verified website address.
+
+References: [GitHub Pages workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages), [HTTPS support](https://docs.github.com/en/pages/getting-started-with-github-pages/securing-your-github-pages-site-with-https).
+
+## Verify hosting after publication
+
+1. Open the verified public HTTPS address on the iPhone, then turn the PC off.
+2. Reload the page while connected to the internet. It must load independently of the PC.
+3. Choose **3** seconds exercise, **2** seconds rest, **3** rounds. Expect preparation followed by the full workout, finishing after **16 seconds** with no final rest.
+4. Check Pause/Resume, Reset, and the cues alongside YouTube, with the timer visible and the screen unlocked.
+
+This milestone provides online hosting only. Opening the page still needs internet access until offline support is added. Record the iPhone result before continuing.
 
 ## Run the app
 
@@ -157,6 +176,12 @@ The YouTube app must already support playback while another app is visible for t
 
 - Twenty-five repeatable behaviour checks passed. The earlier workout and settings checks were updated to account for the additional three-second preparation.
 - Browser verification covers the preparation display, pausing and resuming preparation, workout transitions and completion, and mobile layout.
-- Real iPhone verification of the new cues alongside YouTube is pending.
+- The user subsequently confirmed that the countdown and cues worked on the iPhone with YouTube playing.
+
+## Hosting preparation checkpoint — October 18, 2026
+
+- The repository is private. GitHub's Pages setup request returned: **Your current plan does not support GitHub Pages for this repository.**
+- A manual publishing workflow is prepared. No repository visibility change has been made, and no website has been published.
+- Awaiting the user's decision about making the source repository public or choosing another route.
 
 Pause here for the user's test before adding further timer features.

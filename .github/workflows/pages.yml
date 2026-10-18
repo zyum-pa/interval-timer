@@ -1,0 +1,41 @@
+name: Publish timer to GitHub Pages
+
+# Publishing is a deliberate action, separate from saving a checkpoint.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Get the saved project files
+        uses: actions/checkout@v6
+
+      - name: Check workout behaviour
+        run: node --test tests/workout.test.cjs
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload only the website files
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+
+      - name: Publish the website
+        id: deployment
+        uses: actions/deploy-pages@v4
