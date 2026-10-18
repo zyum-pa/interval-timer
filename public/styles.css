@@ -41,8 +41,14 @@ button:disabled { opacity: 0.65; cursor: wait; }
 
 .secondary { background: #dfe8e1; color: #182b32; }
 
+.workout-progress { margin-top: 28px; text-align: center; }
+
+#phase-display { margin: 0; font-size: 1.6rem; font-weight: 750; }
+
+#round-display { margin: 4px 0 0; color: #3e625b; }
+
 #time-display {
-  margin: 32px 0 0;
+  margin: 16px 0 0;
   font-size: clamp(4rem, 20vw, 6rem);
   font-weight: 750;
   font-variant-numeric: tabular-nums;

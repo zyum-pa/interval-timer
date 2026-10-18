@@ -5,9 +5,17 @@ const timerStatus = document.querySelector("#timer-status");
 const startButton = document.querySelector("#start-button");
 const pauseButton = document.querySelector("#pause-button");
 const resetButton = document.querySelector("#reset-button");
+const phaseDisplay = document.querySelector("#phase-display");
+const roundDisplay = document.querySelector("#round-display");
 
-const durationMs = 10_000; // A millisecond is one thousandth of a second.
-let remainingMs = durationMs;
+// A short, fixed workout keeps this lesson quick to test.
+const workout = [
+  { phase: "Exercise", round: 1, durationMs: 10_000 },
+  { phase: "Rest", round: 1, durationMs: 5_000 },
+  { phase: "Exercise", round: 2, durationMs: 10_000 },
+];
+let phaseIndex = 0;
+let remainingMs = workout[0].durationMs;
 let finishAt = 0;
 let updateInterval;
 let timerState = "ready";
@@ -34,7 +42,7 @@ async function prepareAudio() {
   }
 }
 
-function playBeep(onFinished = () => {}) {
+function playBeep({ frequency = 880, duration = 0.25, onFinished = () => {} } = {}) {
   if (!audioContext || audioContext.state !== "running") {
     throw new Error("Audio is not running.");
   }
@@ -43,9 +51,8 @@ function playBeep(onFinished = () => {}) {
   const tone = audioContext.createOscillator();
   const volume = audioContext.createGain();
   const start = audioContext.currentTime;
-  const duration = 0.25;
 
-  tone.frequency.value = 880;
+  tone.frequency.value = frequency;
   volume.gain.setValueAtTime(0, start);
   volume.gain.linearRampToValueAtTime(0.2, start + 0.01);
   volume.gain.linearRampToValueAtTime(0, start + duration);
@@ -65,6 +72,11 @@ function renderTimer() {
   // Round up so 00:00 appears only when the countdown actually finishes.
   const seconds = Math.ceil(remainingMs / 1000);
   timeDisplay.textContent = `00:${String(seconds).padStart(2, "0")}`;
+  const phase = timerState === "finished" ? "Complete" : workout[phaseIndex].phase;
+  const round = `Round ${workout[phaseIndex].round} of 2`;
+  // Update announcements only when the phase or round actually changes.
+  if (phaseDisplay.textContent !== phase) phaseDisplay.textContent = phase;
+  if (roundDisplay.textContent !== round) roundDisplay.textContent = round;
   const labels = { ready: "Ready", running: "Running", paused: "Paused", finished: "Finished" };
   // Announce status changes to screen readers only when the state changes.
   if (timerStatus.textContent !== labels[timerState]) {
@@ -80,27 +92,47 @@ function stopUpdates() {
   updateInterval = undefined;
 }
 
-function updateCountdown() {
-  // Read elapsed time from the browser clock, independent of update delays.
-  remainingMs = Math.max(0, finishAt - performance.now());
-  if (remainingMs === 0) {
-    stopUpdates();
-    timerState = "finished";
-    try {
-      playBeep();
-    } catch (error) {
-      soundStatus.textContent = "Countdown finished, but sound was unavailable. Try the sound test.";
-      console.warn("Completion sound failed.", error);
-    }
+function playWorkoutCue(completed = false) {
+  try {
+    playBeep(completed ? { frequency: 660, duration: 0.75 } : {});
+  } catch (error) {
+    const event = completed ? "Workout finished" : "Phase changed";
+    soundStatus.textContent = `${event}, but sound was unavailable. Try the sound test.`;
+    console.warn("Workout sound failed.", error);
   }
+}
+
+function updateCountdown() {
+  if (timerState !== "running") return;
+  const now = performance.now();
+  let phaseChanged = false;
+
+  // Carry the finish time forward so browser delays don't extend the workout.
+  while (now >= finishAt) {
+    if (phaseIndex === workout.length - 1) {
+      remainingMs = 0;
+      stopUpdates();
+      timerState = "finished";
+      playWorkoutCue(true);
+      renderTimer();
+      return;
+    }
+    phaseIndex += 1;
+    finishAt += workout[phaseIndex].durationMs;
+    phaseChanged = true;
+  }
+
+  remainingMs = finishAt - now;
+  // If updates were delayed, cue the current phase once, without old cues.
+  if (phaseChanged) playWorkoutCue();
   renderTimer();
 }
 
 function runCountdown() {
   // Audio preparation must not delay the timer or undo a Reset click.
   prepareAudio().catch((error) => {
-    soundStatus.textContent = "The timer will continue, but sound could not start. Try the sound test.";
-    console.warn("Countdown audio could not start.", error);
+    soundStatus.textContent = "The workout will continue, but sound could not start. Try the sound test.";
+    console.warn("Workout audio could not start.", error);
   });
   timerState = "running";
   finishAt = performance.now() + remainingMs;
@@ -110,7 +142,8 @@ function runCountdown() {
 
 startButton.addEventListener("click", () => {
   if (timerState !== "ready" && timerState !== "finished") return;
-  remainingMs = durationMs;
+  phaseIndex = 0;
+  remainingMs = workout[0].durationMs;
   runCountdown();
 });
 
@@ -130,7 +163,8 @@ pauseButton.addEventListener("click", () => {
 resetButton.addEventListener("click", () => {
   stopUpdates();
   timerState = "ready";
-  remainingMs = durationMs;
+  phaseIndex = 0;
+  remainingMs = workout[0].durationMs;
   renderTimer();
 });
 
@@ -139,10 +173,10 @@ soundButton.addEventListener("click", async () => {
   soundStatus.textContent = "Preparing sound…";
   try {
     await prepareAudio();
-    playBeep(() => {
+    playBeep({ onFinished: () => {
       soundButton.disabled = false;
       soundStatus.textContent = "Test finished. Did you hear the beep?";
-    });
+    } });
     soundStatus.textContent = "Playing a short beep…";
   } catch (error) {
     soundButton.disabled = false;

@@ -3,30 +3,36 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Interval Timer · Simple countdown</title>
+    <title>Interval Timer · Two-round workout</title>
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="styles.css">
     <script src="app.js" defer></script>
   </head>
   <body>
     <main>
-      <p class="eyebrow">Interval Timer · Lesson 2</p>
-      <h1>A simple countdown.</h1>
-      <p>Ten seconds. One beep at the finish.</p>
+      <p class="eyebrow">Interval Timer · Lesson 3</p>
+      <h1>Your first workout.</h1>
+      <p>10 seconds exercise · 5 seconds rest · 2 rounds</p>
+      <div class="workout-progress" aria-live="polite" aria-atomic="true">
+        <p id="phase-display">Exercise</p>
+        <p id="round-display">Round 1 of 2</p>
+      </div>
       <p id="time-display" role="timer" aria-label="Time remaining">00:10</p>
       <p id="timer-status" role="status">Ready</p>
-      <div class="controls" aria-label="Countdown controls">
+      <div class="controls" aria-label="Workout controls">
         <button id="start-button" type="button">Start</button>
         <button id="pause-button" type="button" disabled>Pause</button>
         <button id="reset-button" class="secondary" type="button">Reset</button>
       </div>
       <section aria-labelledby="test-heading">
-        <h2 id="test-heading">Try the controls</h2>
+        <h2 id="test-heading">Follow the workout</h2>
         <ol>
-          <li>Start, then pause after a few seconds. The time should hold.</li>
-          <li>Resume to continue, or reset to return to ten seconds.</li>
-          <li>Let it reach zero. Listen for a beep and look for “Finished”.</li>
+          <li>Exercise for ten seconds in round 1.</li>
+          <li>Rest for five seconds, then exercise for ten seconds in round 2.</li>
+          <li>Finish immediately after round 2, with no final rest.</li>
         </ol>
+        <p>A short beep marks phase changes. A longer, lower tone marks completion.</p>
+        <p>Pause holds your place. Reset returns to the beginning, ready to start.</p>
         <p>On your iPhone, try again with YouTube music playing. Keep this page visible and the screen unlocked.</p>
       </section>
       <section aria-labelledby="sound-heading">

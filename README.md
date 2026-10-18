@@ -20,13 +20,13 @@ A beginner learning project: a personal interval timer web app, developed on Win
 
 ## Working approach
 
-Keep the implementation simple, explain new technical terms and any proposed dependencies, work in small steps, and verify each result. Save working checkpoints with Git and GitHub.
+Treat this as a guided course in product and software development. Before each lesson, explain the user benefit, product decisions, and success criteria, then pause for questions before changing files. Keep code details brief unless requested. Build one small increment, check it, and pause for the user's test. Save working checkpoints with Git and GitHub, distinguishing browser checks from real iPhone results.
 
 ## Current status
 
-Lesson 2: a fixed ten-second countdown with Start, Pause/Resume, Reset, and a completion beep. Browser checks are complete; iPhone testing of the countdown and automatic completion sound is pending.
+Lesson 3: a fixed two-round workout: exercise for ten seconds, rest for five seconds, exercise for ten seconds, then finish with no final rest. Includes phase and round labels, Start, Pause/Resume, Reset, short transition beeps, and a longer, lower completion tone. Real iPhone verification of this workout is pending.
 
-Lesson 1's button-triggered sound was tested successfully in Safari on the user's iPhone alongside music from the YouTube app.
+The user confirmed that the preceding simple-countdown test worked. Lesson 1's button-triggered sound was also tested successfully in Safari on the user's iPhone alongside music from the YouTube app.
 
 ## Run the app
 
@@ -63,11 +63,31 @@ Keep the page visible and the screen unlocked during this test. Reload Safari to
 7. Start again, pause, then reset. Expect **00:10** and **Ready** again.
 8. On your iPhone, repeat with music playing in the YouTube app. Confirm that the automatic beep at zero is audible and that music continues.
 
-The countdown uses `performance.now()`, the browser's elapsed-time clock, and a target finish time. A repeated update refreshes the display about every tenth of a second; remaining time comes from the clock rather than counting updates. Pause saves the remaining fraction of a second as well as the whole seconds shown on screen.
+These are the historical Lesson 2 checks. The current page runs Lesson 3's workout; use its checklist below.
 
-Start and Resume prepare the browser's sound workspace during the tap so the finish beep can happen automatically later. Audio failure does not stop the visual countdown. No new dependencies were added.
+## Verify Lesson 3
 
-This lesson has a fixed duration and one countdown. Adjustable settings, the three-second preparation countdown, exercise/rest rounds, and final-five-second cues belong to later lessons.
+Reload Safari and look for **Interval Timer · Lesson 3**. Keep the page visible and the screen unlocked.
+
+1. Expect **Exercise**, **Round 1 of 2**, **00:10**, and **Ready**.
+2. Tap **Start** and follow one uninterrupted workout. After ten seconds, expect **Rest**, **Round 1 of 2**, **00:05**, and a short beep.
+3. After five seconds of rest, expect **Exercise**, **Round 2 of 2**, **00:10**, and another short beep.
+4. After the second exercise, expect **Complete**, **Round 2 of 2**, **00:00**, **Finished**, and one longer, lower tone. There is no final rest. The uninterrupted workout totals 25 seconds.
+5. Start again. Pause during exercise and then during rest. Each pause must hold the phase, round, and remaining time; Resume must continue from that place.
+6. Reset during exercise and during rest, including while paused. Expect the initial ready screen. Wait beyond the old finish time: the cancelled workout must not continue or play future cues.
+7. On your iPhone, repeat with the YouTube app playing music. Check whether phase and completion sounds are audible, clearly different, and allow music to continue.
+
+Product decision: fixed short times make the complete sequence quick to test before adjustable settings are introduced. The separate sound-test button remains available to diagnose audio independently of the workout. The three-second preparation countdown and final-five-second cues are later milestones.
+
+## Repeatable behaviour checks
+
+```powershell
+node --test tests/workout.test.cjs
+```
+
+These checks use Node's built-in tools and add no packages. They cover the full sequence, skipping final rest, distinct cues, pause/resume in both phases, resetting in every phase, delayed updates, replay, and visual completion when audio is unavailable. They use a controlled clock and stand-ins for the browser's sound tools, so they do not establish actual iPhone audio compatibility or visual layout.
+
+The app continues to run entirely in the browser. The local development server only serves the files; it does not manage workouts or store data.
 
 ## Recheck Lesson 1's sound button
 
@@ -89,6 +109,11 @@ The YouTube app must already support playback while another app is visible for t
 
 - Pause held the remaining time; Resume continued to zero and showed **Finished** without browser errors.
 - Start worked again after completion. Reset during an active run restored **00:10** and **Ready** and cancelled the old countdown.
-- iPhone verification of these controls and the automatic completion beep is pending.
+- The user subsequently confirmed that the Lesson 2 test worked.
+
+## Lesson 3 checkpoint — October 18, 2026
+
+- Repeatable behaviour checks passed. Real browser checks cover the phase and round displays, controls, completion, and mobile layout.
+- Real iPhone verification of the full sequence and its sounds alongside YouTube is pending.
 
 Pause here for the user's test before adding further timer features.
