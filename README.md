@@ -23,7 +23,7 @@ The timer is published at **[https://zyum-pa.github.io/interval-timer/](https://
 
 The first version is complete for the intended personal iPhone setup. The user confirmed offline operation on the iPhone, sound alongside YouTube after reconnecting, and correct operation with music both on and off. The screen stayed undimmed during the tested workout and dimmed only after the workout stopped.
 
-Current milestone: Lesson 10, explicit app updates. Downloaded updates offer an **Update app** button in **App updates**, below the workout controls. Running and paused workouts are protected, settings are preserved, and update failures release the controls. Real iPhone migration and button verification are pending.
+Current milestone: Lesson 10, explicit app updates. Downloaded updates offer an **Update app** button in **App updates**, below the workout controls. Running and paused workouts are protected, settings are preserved, and update failures release the controls. The user confirmed that Lesson 10 reached the existing iPhone Home Screen app and settings were preserved. The v5 follow-up release adds **update test** to the lesson label; real iPhone button verification is pending.
 
 The user confirmed that Lesson 9 remembers workout settings on the iPhone, including offline, and that workouts still work with YouTube. The initial Lesson 8 → 9 update was stuck until the phone restarted; Lesson 10 addresses that handoff instead of requiring routine phone restarts.
 
@@ -83,7 +83,7 @@ Reference: [browser local storage](https://developer.mozilla.org/en-US/docs/Web/
 
 ## Verify Lesson 10: updates without a phone restart
 
-Stage 1: get the new updater into the existing Home Screen app.
+Stage 1: get the new updater into the existing Home Screen app. The user confirmed this handoff and preserved settings.
 
 1. With internet connected and no workout in progress, fully close and reopen the Home Screen timer. Leave it visible for about 30 seconds so it can download the new files.
 2. Fully close and reopen it once more. Expect **Lesson 10** and the same saved workout choices. Do not clear website data or reinstall the icon. If it still shows Lesson 9, report that result before proceeding; the actual iPhone migration is not assumed to have passed.
@@ -91,10 +91,10 @@ Stage 1: get the new updater into the existing Home Screen app.
 
 Pause for that confirmation before publishing the verification update: skipping this stage would bypass the one-time bridge needed by the old updater.
 
-Stage 2, after Stage 1 is confirmed: publish a small version-marked verification release, then test **Update app**.
+Stage 2: test **Update app** with the v5 follow-up release, marked **Interval Timer · Lesson 10 · update test**. Keep the existing Home Screen app open while checking; closing every timer window can allow an update to activate naturally and bypass the button test.
 
 1. Open or return to the timer online. Under **App updates**, expect **Update saved** and **Update app** after the complete new version is saved.
-2. Start and pause a workout: the update button must be disabled and the workout must stay intact. Reset or finish the workout, tap Update app, and expect **Updating…** followed by the newer version with the saved choices and Ready.
+2. Start and pause a workout: the update button must be disabled and the workout must stay intact. Reset or finish the workout, tap Update app, and expect **Updating…** followed by **Interval Timer · Lesson 10 · update test**, the saved choices, and Ready. The updating message may be brief. If the marker appears before tapping, natural activation may have occurred; report that separately from a passed button test.
 3. If another timer window has a running or paused workout, applying from an idle window must be declined without disrupting either window. Idle windows release their controls after a declined or timed-out update. Older unresponsive timer windows must be closed before a normal button update can proceed.
 4. Verify the new version opens offline and workouts still work with YouTube after reconnecting. Repeated taps must not trigger overlapping updates. Only the window whose user requested the update refreshes.
 
@@ -106,7 +106,7 @@ No new accounts, packages, or browser permissions are needed. We can verify brow
 
 The worker saves one complete version of the HTML, CSS, JavaScript, manifest, and icons. It serves only these known app files from its versioned cache (the browser's saved file storage), including the folder's entry page. It does not save unrelated sites or other projects. A missing file causes installation to fail; readiness is shown only after the controlling worker checks that every required file is present.
 
-For every future app-file change, **increase the cache version in `public/sw.js` and the matching `data-app-version` in `public/index.html` (currently `v4`)**. Publish the whole `public/` folder together; a test enforces that those versions match. Downloads include the release version in their addresses to avoid reusing an older copy from the host. The folder launch address serves the saved `index.html`, so a separately cached directory response cannot keep the app on an old lesson. Normal updates download a complete separate copy and wait for **Update app** (or natural activation once all older windows are gone). The button is disabled during running or paused workouts. Before activation, the waiting worker asks every in-scope window to lock its controls; busy or unresponsive windows block the update. Rejected requests unlock idle windows, and a timeout recovers stalled page controls. Only the requesting window reloads after activation; other windows can apply their already-active newer version later when idle. Saved settings are separate and are never cleared by the updater.
+For every future app-file change, **increase the cache version in `public/sw.js` and the matching `data-app-version` in `public/index.html` (currently `v5`)**. Publish the whole `public/` folder together; a test enforces that those versions match. Downloads include the release version in their addresses to avoid reusing an older copy from the host. The folder launch address serves the saved `index.html`, so a separately cached directory response cannot keep the app on an old lesson. Normal updates download a complete separate copy and wait for **Update app** (or natural activation once all older windows are gone). The button is disabled during running or paused workouts. Before activation, the waiting worker asks every in-scope window to lock its controls; busy or unresponsive windows block the update. Rejected requests unlock idle windows, and a timeout recovers stalled page controls. Only the requesting window reloads after activation; other windows can apply their already-active newer version later when idle. Saved settings are separate and are never cleared by the updater.
 
 **One-time v4 bridge:** Lessons 8/9 do not have the update button. Release `v4` calls `skipWaiting()` after saving the complete app, advancing the file-serving helper without navigating or refreshing existing screens. It retains old v1/v2/v3 files for requests from those screens. A subsequent fresh opening can therefore load Lesson 10 despite an old retained window. This also replaces the initial v3 release, whose live-site check exposed an older host-cached launch page. Later releases (v5 onward) do not use this automatic bridge and resume normal user-controlled updates. There is no forced legacy-page navigation and no attempt to infer a legacy workout's state. The iPhone must confirm that closing/reopening creates a fresh page in its actual setup.
 
@@ -325,4 +325,9 @@ The YouTube app must already support playback while another app is visible for t
 - Added the one-time v4 legacy bridge to address current Lesson 9 installations, without clearing settings or navigating an open workout. The initial v3 publication exposed stale host-cached launch HTML during live verification; v4 requests fresh release files and serves the canonical saved index for the launch address.
 - All 56 automated checks passed. In the browser, the exact saved Lesson 9 version was left paused in one window while another downloaded the corrected v4 bridge. Lesson 10 then loaded despite that retained old window, with saved choices intact; the old workout remained paused.
 - A separate temporary normal update was declined while another new-version window was paused, then applied after both were idle. Only the requesting window refreshed. With the corrected download and cache matching, a temporary v5 update was blocked during a paused workout, applied after Reset with the server stopped, and cold-opened offline with settings preserved.
-- Publish v4 and pause for actual iPhone Stage 1 confirmation. Do not publish v5 until the existing Home Screen installation has received the bridge; its migration and subsequent button test are still pending.
+- The user subsequently confirmed Lesson 10 in the existing iPhone Home Screen app, with settings still remembered. This completes Stage 1 and allows the v5 verification release; the actual iPhone button test remains pending.
+
+## Lesson 10 follow-up: update-button verification
+
+- Release v5 changes only the lesson label to **Interval Timer · Lesson 10 · update test** and advances the saved app version. It uses the normal waiting update process, without the one-time v4 bridge. No workout behavior, packages, or accounts are added.
+- Publish the release and pause for the Stage 2 iPhone checks above. Do not infer a successful button update from simply seeing the new label after closing every window.

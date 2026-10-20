@@ -1,6 +1,6 @@
 // Bump this version whenever any saved app file changes, including this script.
 const CACHE_PREFIX = `interval-timer:${self.registration.scope}:`;
-const CACHE_NAME = `${CACHE_PREFIX}v4`;
+const CACHE_NAME = `${CACHE_PREFIX}v5`;
 const VERSION = CACHE_NAME.slice(CACHE_PREFIX.length);
 // v4 bridges the old updater and replaces any v3 copy with stale host-cached HTML.
 const LEGACY_BRIDGE = VERSION === "v4";
