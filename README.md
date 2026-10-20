@@ -23,7 +23,9 @@ The timer is published at **[https://zyum-pa.github.io/interval-timer/](https://
 
 The first version is complete for the intended personal iPhone setup. The user confirmed offline operation on the iPhone, sound alongside YouTube after reconnecting, and correct operation with music both on and off. The screen stayed undimmed during the tested workout and dimmed only after the workout stopped.
 
-Current milestone completed: Lesson 10, explicit app updates. Downloaded updates offer an **Update app** button in **App updates**, below the workout controls. Running and paused workouts are protected, settings are preserved, and update failures release the controls. The user confirmed that Lesson 10 reached the existing iPhone Home Screen app and settings were preserved. On the v5 follow-up, the user confirmed that the button stayed disabled while paused, applied after Reset, showed **Lesson 10 · update test**, preserved settings, and left the workout working with YouTube.
+Current milestone: a compact everyday workout screen (v6). The lesson label, introduction, repeated setting hints, workout explanations, and installation instructions have been removed from the app. Settings, phase, round, large time display, Start/Pause/Resume/Reset, a small Test sound button, and offline status remain. Update notices appear only when an update or issue needs attention. Actual iPhone layout confirmation is pending.
+
+Completed milestone: Lesson 10, explicit app updates. Downloaded updates offer an **Update app** button below the workout controls. Running and paused workouts are protected, settings are preserved, and update failures release the controls. The user confirmed that Lesson 10 reached the existing iPhone Home Screen app and settings were preserved. On the v5 follow-up, the user confirmed that the button stayed disabled while paused, applied after Reset, showed **Lesson 10 · update test**, preserved settings, and left the workout working with YouTube.
 
 The user confirmed that Lesson 9 remembers workout settings on the iPhone, including offline, and that workouts still work with YouTube. The initial Lesson 8 → 9 update was stuck until the phone restarted; Lesson 10 addresses that handoff instead of requiring routine phone restarts.
 
@@ -37,7 +39,7 @@ The user confirmed that Lesson 5's starting countdown and final-five-second cues
 
 ## Verify Lesson 7: Home Screen installation
 
-These are historical installation checks. The user confirmed them; the current page is Lesson 10.
+These are historical installation checks. The user confirmed them; the current compact page has no lesson label. Installation instructions are kept here rather than on the workout screen.
 
 1. On the iPhone, open **https://zyum-pa.github.io/interval-timer/** in Safari and reload it.
 2. Tap Safari's **Share** button, then **Add to Home Screen**. If shown, keep **Open as Web App** turned on. Keep the name **Interval Timer** and tap **Add**.
@@ -54,7 +56,7 @@ References: [Apple's Home Screen instructions](https://support.apple.com/en-lamr
 
 ## Verify Lesson 8: offline use
 
-These offline checks still apply on the current Lesson 10 page.
+These offline checks still apply on the compact page.
 
 1. Keep internet on. Quit the Home Screen timer from the iPhone app switcher, then reopen it. Wait for **Ready for offline use** near the top. Preparation must happen in the Home Screen app itself, even if Safari is already prepared.
 2. Quit the timer completely. Turn off both **Wi-Fi and mobile data** in Settings, then open the timer from its existing Home Screen icon.
@@ -66,7 +68,7 @@ The timer is what works offline; this does not download YouTube music. Clearing 
 
 ## Verify Lesson 9: remembered settings
 
-These settings checks still apply on Lesson 10. The user confirmed them on Lesson 9.
+These settings checks still apply on the compact page. The user confirmed them on Lesson 9.
 
 1. While online, open the Home Screen app. Keep the existing Home Screen icon. For the transition to Lesson 10, use the migration steps below rather than the old close-every-window instructions.
 2. Choose **8 seconds exercise / 7 seconds rest / 2 rounds**, then quit and reopen the app. Expect those same values, **Exercise**, **Round 1 of 2**, **00:08**, and **Ready**. No workout should start automatically.
@@ -82,6 +84,8 @@ Only the three numeric choices are saved in the browser's local storage (small d
 Reference: [browser local storage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage).
 
 ## Verify Lesson 10: updates without a phone restart
+
+These are the historical migration and v5 verification steps, confirmed by the user. Current releases have no lesson label; identify the v6 release by its compact layout.
 
 Stage 1: get the new updater into the existing Home Screen app. The user confirmed this handoff and preserved settings.
 
@@ -106,7 +110,7 @@ No new accounts, packages, or browser permissions are needed. The user confirmed
 
 The worker saves one complete version of the HTML, CSS, JavaScript, manifest, and icons. It serves only these known app files from its versioned cache (the browser's saved file storage), including the folder's entry page. It does not save unrelated sites or other projects. A missing file causes installation to fail; readiness is shown only after the controlling worker checks that every required file is present.
 
-For every future app-file change, **increase the cache version in `public/sw.js` and the matching `data-app-version` in `public/index.html` (currently `v5`)**. Publish the whole `public/` folder together; a test enforces that those versions match. Downloads include the release version in their addresses to avoid reusing an older copy from the host. The folder launch address serves the saved `index.html`, so a separately cached directory response cannot keep the app on an old lesson. Normal updates download a complete separate copy and wait for **Update app** (or natural activation once all older windows are gone). The button is disabled during running or paused workouts. Before activation, the waiting worker asks every in-scope window to lock its controls; busy or unresponsive windows block the update. Rejected requests unlock idle windows, and a timeout recovers stalled page controls. Only the requesting window reloads after activation; other windows can apply their already-active newer version later when idle. Saved settings are separate and are never cleared by the updater.
+For every future app-file change, **increase the cache version in `public/sw.js` and the matching `data-app-version` in `public/index.html` (currently `v6`)**. Publish the whole `public/` folder together; a test enforces that those versions match. Downloads include the release version in their addresses to avoid reusing an older copy from the host. The folder launch address serves the saved `index.html`, so a separately cached directory response cannot keep the app on an old lesson. Normal updates download a complete separate copy and wait for **Update app** (or natural activation once all older windows are gone). The button is disabled during running or paused workouts. Before activation, the waiting worker asks every in-scope window to lock its controls; busy or unresponsive windows block the update. Rejected requests unlock idle windows, and a timeout recovers stalled page controls. Only the requesting window reloads after activation; other windows can apply their already-active newer version later when idle. Saved settings are separate and are never cleared by the updater.
 
 **One-time v4 bridge:** Lessons 8/9 do not have the update button. Release `v4` calls `skipWaiting()` after saving the complete app, advancing the file-serving helper without navigating or refreshing existing screens. It retains old v1/v2/v3 files for requests from those screens. A subsequent fresh opening can therefore load Lesson 10 despite an old retained window. This also replaces the initial v3 release, whose live-site check exposed an older host-cached launch page. Later releases (v5 onward) do not use this automatic bridge and resume normal user-controlled updates. There is no forced legacy-page navigation and no attempt to infer a legacy workout's state. The iPhone must confirm that closing/reopening creates a fresh page in its actual setup.
 
@@ -174,7 +178,7 @@ Keep the page visible and the screen unlocked during this test. Reload Safari to
 7. Start again, pause, then reset. Expect **00:10** and **Ready** again.
 8. On your iPhone, repeat with music playing in the YouTube app. Confirm that the automatic beep at zero is audible and that music continues.
 
-These are historical checks. The current page is Lesson 10; the Lesson 5 workout checks below still apply.
+These are historical checks. The current page uses the compact layout; the Lesson 5 workout checks below still apply.
 
 ## Historical Lesson 3 checks
 
@@ -208,7 +212,7 @@ Product decisions: whole seconds and positive round counts keep setup straightfo
 
 ## Verify Lesson 5
 
-These workout checks still apply on the current Lesson 10 page. Keep the page visible and the screen unlocked.
+These workout checks still apply on the compact page. Keep the page visible and the screen unlocked.
 
 1. Choose **8** seconds exercise, **7** seconds rest, **2** rounds. Tap Start: expect **Get ready**, **Round 1 of 2**, and **00:03 → 00:02 → 00:01**, with three short ticks. Then expect the exercise opening cue and the full **00:08** exercise period.
 2. In exercise, expect one short tick at **5, 4, 3, 2, 1** seconds remaining, then the stronger rest-opening cue. In rest, expect another five ticks before the next exercise-opening cue.
@@ -332,3 +336,11 @@ The YouTube app must already support playback while another app is visible for t
 - Release v5 changes only the lesson label to **Interval Timer · Lesson 10 · update test** and advances the saved app version. It uses the normal waiting update process, without the one-time v4 bridge. No workout behavior, packages, or accounts are added.
 - All 56 automated checks passed before publication. On the live website, the update waited during running and paused workouts, applied after Reset through the button, and preserved the saved choices.
 - The user confirmed on the iPhone that **Update app** stayed disabled while paused, updated after Reset, and displayed **Lesson 10 · update test**. Settings were remembered and the workout still worked with YouTube. This completes the main update-button milestone; no further app release is needed to record this result.
+
+## Compact workout screen checkpoint
+
+- Release v6 removes teaching and installation text from the app, along with the duplicate workout summary and routine setting hints. The detailed guidance stays in this README. It keeps units, validation errors, storage warnings, and audio errors, with a compact Test sound control.
+- Update notices take space only when an update is available, applying, or has an error. The normal update protection and separate saved workout settings remain in use. No packages or accounts were added.
+- All 56 automated checks passed. Existing offline checks also verify that the update area is hidden when idle and visible when an update is saved. Browser previews at 390 × 844 and 390 × 664 fit without scrolling; a validation error also fit in the shorter preview. Start, Pause/Resume, Reset, and Test sound worked without browser warnings or errors. The compact app reopened with its local server stopped and retained saved settings.
+- On the iPhone, open the existing Home Screen app online and apply this release through **Update app**. Expect **Interval Timer** without a lesson label. With the keyboard dismissed and the phone in portrait, confirm that settings, phase/round, time, and all workout controls fit on one screen. Check Pause/Resume, Reset, settings memory, and a short workout with YouTube. Larger text preferences and the editing keyboard may require scrolling; content is never clipped to force a fit.
+- Pause for the user's actual iPhone layout result before further changes.

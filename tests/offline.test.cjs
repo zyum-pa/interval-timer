@@ -178,6 +178,7 @@ test("readiness detects an incomplete saved copy instead of promising offline av
 async function createStatus({ supported = true, secure = true, controlled = true, fails = false, waiting = false } = {}) {
   const status = { textContent: "" };
   const updateStatus = { textContent: "" };
+  const updatePanel = { hidden: true };
   const button = { hidden: true, disabled: false, textContent: "", addEventListener(type, callback) { this[type] = callback; } };
   const listeners = {};
   const requests = [];
@@ -206,7 +207,7 @@ async function createStatus({ supported = true, secure = true, controlled = true
   };
   runInNewContext(readFileSync(join(root, "offline.js"), "utf8"), {
     document: {
-      querySelector(id) { return { "#offline-status": status, "#update-status": updateStatus, "#update-button": button }[id]; },
+      querySelector(id) { return { "#offline-status": status, "#update-status": updateStatus, "#update-button": button, "#app-updates": updatePanel }[id]; },
       body: { dataset: { appVersion: "v4" } }, addEventListener() {},
     },
     navigator: supported ? { serviceWorker: workers } : {},
@@ -220,6 +221,7 @@ async function createStatus({ supported = true, secure = true, controlled = true
     text: () => status.textContent,
     updateText: () => updateStatus.textContent,
     button,
+    updatePanel,
     locked: () => locked,
     reloads: () => reloads,
     setBusy(value) { busy = value; workout.onChange(); },
@@ -249,6 +251,7 @@ test("registration alone does not promise offline readiness; only the controllin
   assert.match(page.text(), /Saving/);
   page.report(true);
   assert.equal(page.text(), "Ready for offline use.");
+  assert.equal(page.updatePanel.hidden, true, "no update notice occupies the normal workout screen");
   page.report(false);
   assert.match(page.text(), /could not be saved/);
   const uncontrolled = await createStatus({ controlled: false });
@@ -267,6 +270,7 @@ test("a saved update offers a button and preserves offline readiness", async () 
   assert.match(page.updateText(), /Tap Update app/);
   assert.equal(page.button.hidden, false);
   assert.equal(page.button.disabled, false);
+  assert.equal(page.updatePanel.hidden, false, "a saved update remains discoverable in the compact layout");
 });
 
 test("running or paused workouts cannot use Update app", async () => {
@@ -398,5 +402,5 @@ test("the launch address uses the canonical saved index page, not a stale separa
   const directoryKey = [...saved.keys()].find((key) => new URL(key).pathname === "/interval-timer/");
   saved.set(directoryKey, new Response("stale directory page"));
   worker.disconnect();
-  assert.match(await (await worker.request(scope)).text(), /Interval Timer · Lesson 10/);
+  assert.match(await (await worker.request(scope)).text(), /<h1>Interval Timer<\/h1>/);
 });

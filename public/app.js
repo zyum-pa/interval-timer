@@ -7,8 +7,6 @@ const pauseButton = document.querySelector("#pause-button");
 const resetButton = document.querySelector("#reset-button");
 const phaseDisplay = document.querySelector("#phase-display");
 const roundDisplay = document.querySelector("#round-display");
-const workoutSummary = document.querySelector("#workout-summary");
-const settingsHint = document.querySelector("#settings-hint");
 const settingsSaveStatus = document.querySelector("#settings-save-status");
 const settingFields = [
   { key: "exerciseSeconds", input: document.querySelector("#exercise-seconds"), error: document.querySelector("#exercise-error"), max: 3600 },
@@ -187,16 +185,10 @@ function renderTimer() {
   resetButton.disabled = applyingAppUpdate;
   pauseButton.textContent = timerState === "paused" ? "Resume" : "Pause";
   for (const field of settingFields) field.input.disabled = active || applyingAppUpdate;
-  settingsHint.textContent = active
-    ? "Settings are locked. Reset to change them."
-    : "Adjust before starting. Reset keeps your choices.";
   const saveMessage = settingsStorageAvailable
     ? ""
     : "Settings cannot be remembered here. You can still use the timer.";
   if (settingsSaveStatus.textContent !== saveMessage) settingsSaveStatus.textContent = saveMessage;
-  workoutSummary.textContent = settingsValid
-    ? `${settings.exerciseSeconds} sec exercise · ${settings.restSeconds} sec rest · ${settings.rounds} ${settings.rounds === 1 ? "round" : "rounds"}`
-    : "Correct the settings below to start.";
   window.workoutUpdates.onChange?.();
 }
 
@@ -321,12 +313,12 @@ soundButton.addEventListener("click", async () => {
     await prepareAudio();
     playBeep({ onFinished: () => {
       soundButton.disabled = false;
-      soundStatus.textContent = "Test finished. Did you hear the beep?";
+      soundStatus.textContent = "Test finished.";
     } });
     soundStatus.textContent = "Playing a short beep…";
   } catch (error) {
     soundButton.disabled = false;
-    soundStatus.textContent = "Sound could not start. Tap again, or tell me what happened.";
+    soundStatus.textContent = "Sound could not start. Check volume and try again.";
     console.error("Sound test failed.", error);
   }
 });

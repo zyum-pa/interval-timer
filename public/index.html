@@ -2,13 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#f3f5f1">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Interval Timer">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <title>Interval Timer · Workout with countdown cues</title>
+    <title>Interval Timer</title>
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="apple-touch-icon" sizes="180x180" href="icons/timer-180.png">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/timer-192.png">
@@ -16,33 +16,31 @@
     <script src="app.js" defer></script>
     <script src="offline.js" defer></script>
   </head>
-  <body data-app-version="v5">
+  <body data-app-version="v6">
     <main>
-      <p class="eyebrow">Interval Timer · Lesson 10 · update test</p>
-      <h1>Ready, set, move.</h1>
-      <p id="workout-summary">10 sec exercise · 5 sec rest · 2 rounds</p>
-      <p id="offline-status" class="settings-hint" role="status">Offline saving has not started. Internet is needed to open this page.</p>
+      <header>
+        <h1>Interval Timer</h1>
+        <p id="offline-status" role="status">Preparing offline use…</p>
+      </header>
       <fieldset class="settings">
-        <legend>Your workout</legend>
+        <legend>Workout</legend>
         <div class="settings-grid">
           <div>
             <label for="exercise-seconds">Exercise <span>(seconds)</span></label>
-            <input id="exercise-seconds" type="number" inputmode="numeric" min="1" max="3600" step="1" value="10" required aria-describedby="time-limits exercise-error">
+            <input id="exercise-seconds" type="number" inputmode="numeric" min="1" max="3600" step="1" value="10" required aria-describedby="exercise-error">
             <p id="exercise-error" class="field-error" aria-live="polite"></p>
           </div>
           <div>
             <label for="rest-seconds">Rest <span>(seconds)</span></label>
-            <input id="rest-seconds" type="number" inputmode="numeric" min="1" max="3600" step="1" value="5" required aria-describedby="time-limits rest-error">
+            <input id="rest-seconds" type="number" inputmode="numeric" min="1" max="3600" step="1" value="5" required aria-describedby="rest-error">
             <p id="rest-error" class="field-error" aria-live="polite"></p>
           </div>
           <div>
-            <label for="rounds">Rounds <span>(count)</span></label>
-            <input id="rounds" type="number" inputmode="numeric" min="1" max="99" step="1" value="2" required aria-describedby="round-limits rounds-error">
+            <label for="rounds">Rounds</label>
+            <input id="rounds" type="number" inputmode="numeric" min="1" max="99" step="1" value="2" required aria-describedby="rounds-error">
             <p id="rounds-error" class="field-error" aria-live="polite"></p>
           </div>
         </div>
-        <p class="settings-hint"><span id="time-limits">Times: 1–3,600 seconds.</span> <span id="round-limits">Rounds: 1–99.</span> Whole numbers only.</p>
-        <p id="settings-hint" class="settings-hint">Adjust before starting. Reset keeps your choices.</p>
         <p id="settings-save-status" class="settings-hint" role="status"></p>
       </fieldset>
       <div class="workout-progress" aria-live="polite" aria-atomic="true">
@@ -56,38 +54,14 @@
         <button id="pause-button" type="button" disabled>Pause</button>
         <button id="reset-button" class="secondary" type="button">Reset</button>
       </div>
-      <section aria-labelledby="update-heading">
-        <h2 id="update-heading">App updates</h2>
-        <p id="update-status" role="status">Updates are checked when you open the app online.</p>
+      <section id="app-updates" aria-label="App updates" hidden>
+        <p id="update-status" role="status"></p>
         <button id="update-button" class="secondary" type="button" hidden>Update app</button>
-        <p>Apply updates between workouts. Your saved settings stay on this device.</p>
       </section>
-      <section aria-labelledby="test-heading">
-        <h2 id="test-heading">Follow the workout</h2>
-        <ol>
-          <li>Choose your exercise time, rest time, and number of rounds.</li>
-          <li>Start with a three-second “Get ready” countdown, then alternate exercise and rest.</li>
-          <li>Finish after the last exercise, with no final rest.</li>
-        </ol>
-        <p>Short ticks mark 3, 2, 1 before starting and the final five seconds of exercise and rest. A stronger beep marks each phase change; a longer, lower tone marks completion.</p>
-        <p>For phases of five seconds or less, the opening beep replaces the first tick. Pause holds your place, including during “Get ready”. Resume continues without repeating the starting countdown.</p>
-        <p>Reset returns to the beginning using your chosen settings. Your last valid workout settings are remembered on this device, including offline. Reopening starts a new workout from the beginning. Clearing website data can remove your saved choices.</p>
-        <p>On your iPhone, try again with YouTube music playing. Keep this page visible and the screen unlocked.</p>
-      </section>
-      <section aria-labelledby="sound-heading">
-        <h2 id="sound-heading">Check sound separately</h2>
-        <button id="sound-button" class="secondary" type="button">Play test sound</button>
-        <p id="sound-status" role="status">Turn Silent Mode off and choose a comfortable volume.</p>
-      </section>
-      <section aria-labelledby="install-heading">
-        <h2 id="install-heading">Add to your iPhone Home Screen</h2>
-        <ol>
-          <li>Open this page in Safari and tap Share.</li>
-          <li>Choose Add to Home Screen. If shown, keep Open as Web App turned on.</li>
-          <li>Tap Add, then open Interval Timer from its new green stopwatch icon.</li>
-        </ol>
-        <p>Open the Home Screen app online first and wait for “Ready for offline use” before disconnecting. Keep it visible and your screen unlocked during workouts.</p>
-      </section>
+      <footer>
+        <button id="sound-button" class="quiet" type="button">Test sound</button>
+        <p id="sound-status" role="status"></p>
+      </footer>
     </main>
   </body>
 </html>

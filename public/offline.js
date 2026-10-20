@@ -2,6 +2,7 @@
 (() => {
   const status = document.querySelector("#offline-status");
   const updateStatus = document.querySelector("#update-status");
+  const updatePanel = document.querySelector("#app-updates");
   const button = document.querySelector("#update-button");
   const workout = window.workoutUpdates;
   const pageVersion = document.body.dataset.appVersion;
@@ -28,6 +29,7 @@
       : "Saving for offline use… Keep this app open with internet.";
     if (status.textContent !== message) status.textContent = message;
     const available = Boolean(registration?.waiting || (activeVersion && activeVersion !== pageVersion));
+    if (updatePanel) updatePanel.hidden = !(available || requestedUpdate || lockId || updateError);
     if (button) {
       button.hidden = !available && !requestedUpdate;
       button.disabled = Boolean(workout?.isBusy() || lockId || requestedUpdate);
@@ -35,8 +37,8 @@
     }
     const updateMessage = requestedUpdate || lockId ? "Updating… Please keep this window open."
       : updateError || (available
-        ? workout?.isBusy() ? "Update saved. Finish or reset your workout to update."
-          : "Update saved. Tap Update app when you are ready. Your settings will be kept."
+        ? workout?.isBusy() ? "Update saved. Finish or reset to update."
+          : "Update saved. Tap Update app."
         : "No update is ready to apply. Updates are checked when you open or return to the app online.");
     if (updateStatus && updateStatus.textContent !== updateMessage) updateStatus.textContent = updateMessage;
   }
