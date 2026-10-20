@@ -14,6 +14,7 @@ function createPage({ audioAllowed = true, storage = new Map(), storageReadFails
   const intervals = new Map();
   const elements = new Map();
   const cues = [];
+  const window = {};
   const defaultValues = { "#exercise-seconds": "10", "#rest-seconds": "5", "#rounds": "2" };
 
   function element(selector) {
@@ -64,6 +65,7 @@ function createPage({ audioAllowed = true, storage = new Map(), storageReadFails
   }
 
   runInNewContext(script, {
+    window,
     document: { querySelector: element },
     navigator: { audioSession: {} },
     localStorage: {
@@ -84,6 +86,7 @@ function createPage({ audioAllowed = true, storage = new Map(), storageReadFails
   });
 
   return {
+    updates: window.workoutUpdates,
     cues,
     text: (id) => element(`#${id}`).textContent,
     enabled: (id) => !element(`#${id}`).disabled,
@@ -601,4 +604,31 @@ test("Saving workout settings leaves unrelated device storage untouched", () => 
   configure(page, 3, 2, 3);
   assert.equal(storage.get("other-app"), "keep me");
   assert.equal(storage.size, 2);
+});
+
+test("the updater cannot lock a running or paused workout", () => {
+  const page = createPage();
+  page.click("start-button");
+  assert.equal(page.updates.begin(), false);
+  assert.equal(page.text("timer-status"), "Running");
+  page.click("pause-button");
+  assert.equal(page.updates.begin(), false);
+  assert.equal(page.text("timer-status"), "Paused");
+  assert.equal(page.enabled("pause-button"), true);
+  page.click("reset-button");
+  assert.equal(page.updates.begin(), true);
+});
+
+test("applying an update blocks starting and Reset, then failure restores controls and choices", () => {
+  const page = createPage();
+  configure(page, 5, 3, 3);
+  assert.equal(page.updates.begin(), true);
+  assert.equal(page.enabled("start-button"), false);
+  assert.equal(page.enabled("reset-button"), false);
+  page.change("exercise-seconds", "8");
+  page.click("start-button");
+  expectDisplay(page, "Exercise", 1, "00:05", "Ready", 3);
+  page.updates.end();
+  assert.equal(page.enabled("start-button"), true);
+  assert.equal(page.enabled("reset-button"), true);
 });

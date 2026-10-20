@@ -26,11 +26,25 @@ let remainingMs = workout[0].durationMs;
 let finishAt = 0;
 let updateInterval;
 let timerState = "ready";
+let applyingAppUpdate = false;
 let audioContext;
 const preparationMs = 3_000;
 let lastCueSecond;
 let audioRunId = 0;
 const activeWorkoutTones = new Set();
+
+// The updater can lock controls, but cannot replace an active or paused workout.
+window.workoutUpdates = {
+  isBusy: () => timerState === "running" || timerState === "paused",
+  begin() {
+    if (this.isBusy()) return false;
+    applyingAppUpdate = true;
+    renderTimer();
+    return true;
+  },
+  end() { applyingAppUpdate = false; renderTimer(); },
+  onChange: null,
+};
 
 function readSavedSettings() {
   const defaults = { exerciseSeconds: 10, restSeconds: 5, rounds: 2 };
@@ -168,10 +182,11 @@ function renderTimer() {
     timerStatus.textContent = status;
   }
   const active = timerState === "running" || timerState === "paused";
-  startButton.disabled = active || !settingsValid;
-  pauseButton.disabled = timerState !== "running" && timerState !== "paused";
+  startButton.disabled = active || !settingsValid || applyingAppUpdate;
+  pauseButton.disabled = (!active) || applyingAppUpdate;
+  resetButton.disabled = applyingAppUpdate;
   pauseButton.textContent = timerState === "paused" ? "Resume" : "Pause";
-  for (const field of settingFields) field.input.disabled = active;
+  for (const field of settingFields) field.input.disabled = active || applyingAppUpdate;
   settingsHint.textContent = active
     ? "Settings are locked. Reset to change them."
     : "Adjust before starting. Reset keeps your choices.";
@@ -182,6 +197,7 @@ function renderTimer() {
   workoutSummary.textContent = settingsValid
     ? `${settings.exerciseSeconds} sec exercise · ${settings.restSeconds} sec rest · ${settings.rounds} ${settings.rounds === 1 ? "round" : "rounds"}`
     : "Correct the settings below to start.";
+  window.workoutUpdates.onChange?.();
 }
 
 function stopUpdates() {
@@ -266,6 +282,7 @@ function runCountdown(starting = false) {
 }
 
 startButton.addEventListener("click", () => {
+  if (applyingAppUpdate) return;
   if (timerState !== "ready" && timerState !== "finished") return;
   applySettings();
   if (!settingsValid) return;
@@ -277,6 +294,7 @@ startButton.addEventListener("click", () => {
 });
 
 pauseButton.addEventListener("click", () => {
+  if (applyingAppUpdate) return;
   if (timerState === "paused") {
     runCountdown();
   } else if (timerState === "running") {
@@ -290,6 +308,7 @@ pauseButton.addEventListener("click", () => {
 });
 
 resetButton.addEventListener("click", () => {
+  if (applyingAppUpdate) return;
   stopUpdates();
   timerState = "ready";
   applySettings();

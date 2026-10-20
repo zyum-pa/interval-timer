@@ -8,11 +8,19 @@ const root = join(__dirname, "../public");
 const workerScript = readFileSync(join(root, "sw.js"), "utf8");
 const scope = "https://example.test/interval-timer/";
 
+class TestMessageChannel {
+  constructor() {
+    this.port1 = { onmessage: null, close() {} };
+    this.port2 = { postMessage: (data) => queueMicrotask(() => this.port1.onmessage?.({ data })) };
+  }
+}
+
 // Model storage and lost connections. Actual worker lifecycle is checked in a browser too.
-function createWorker({ storage = new Map(), version = "v1", failFile, offline = false } = {}) {
+function createWorker({ storage = new Map(), version = "v1", failFile, offline = false, active = false, clients = [] } = {}) {
   const handlers = {};
   const networkCalls = [];
   let claimed = false;
+  let activated = 0;
   async function network(request) {
     const url = typeof request === "string" ? request : request.url;
     networkCalls.push(url);
@@ -39,16 +47,17 @@ function createWorker({ storage = new Map(), version = "v1", failFile, offline =
   };
   runInNewContext(workerScript.replace(/(\$\{CACHE_PREFIX\})v\d+/, "$1" + version), {
     self: {
-      registration: { scope },
+      registration: { scope, active: active ? {} : null },
       addEventListener(type, handler) { handlers[type] = handler; },
-      clients: { async claim() { claimed = true; } },
-      skipWaiting() { assert.fail("An update must never take over an open workout"); },
+      clients: { async claim() { claimed = true; }, async matchAll() { return clients; } },
+      async skipWaiting() { activated += 1; },
     },
-    caches, URL, Request, fetch: network,
+    caches, URL, Request, fetch: network, MessageChannel: TestMessageChannel, setTimeout, clearTimeout,
   });
   return {
     storage, networkCalls,
     claimed: () => claimed,
+    activations: () => activated,
     disconnect() { offline = true; },
     async lifecycle(type, extra = {}) {
       let pending;
@@ -67,6 +76,14 @@ function createWorker({ storage = new Map(), version = "v1", failFile, offline =
         source: { postMessage(value) { message = value; } },
       });
       return message.ready;
+    },
+    async apply() {
+      let reply;
+      await this.lifecycle("message", {
+        data: { type: "APPLY_UPDATE", id: "test-request" }, source: { url: scope },
+        ports: [{ postMessage(value) { reply = value; } }],
+      });
+      return reply;
     },
   };
 }
@@ -153,10 +170,22 @@ test("readiness detects an incomplete saved copy instead of promising offline av
 
 async function createStatus({ supported = true, secure = true, controlled = true, fails = false, waiting = false } = {}) {
   const status = { textContent: "" };
+  const updateStatus = { textContent: "" };
+  const button = { hidden: true, disabled: false, textContent: "", addEventListener(type, callback) { this[type] = callback; } };
   const listeners = {};
   const requests = [];
+  const timers = new Map();
+  let busy = false;
+  let locked = false;
+  let reloads = 0;
+  const workout = {
+    isBusy: () => busy,
+    begin() { if (busy) return false; locked = true; return true; },
+    end() { locked = false; },
+  };
   const controller = { scriptURL: scope + "sw.js", postMessage(message) { requests.push(message); } };
-  const registration = { waiting: waiting ? {} : null, addEventListener() {}, update: async () => {} };
+  let replyPort;
+  const registration = { waiting: waiting ? { postMessage(message, ports) { requests.push(message); replyPort = ports[0]; } } : null, addEventListener() {}, update: async () => {} };
   const workers = {
     controller: controlled ? controller : null,
     addEventListener(type, handler) { listeners[type] = handler; },
@@ -169,16 +198,31 @@ async function createStatus({ supported = true, secure = true, controlled = true
     ready: Promise.resolve(registration),
   };
   runInNewContext(readFileSync(join(root, "offline.js"), "utf8"), {
-    document: { querySelector() { return status; } },
+    document: {
+      querySelector(id) { return { "#offline-status": status, "#update-status": updateStatus, "#update-button": button }[id]; },
+      body: { dataset: { appVersion: "v3" } }, addEventListener() {},
+    },
     navigator: supported ? { serviceWorker: workers } : {},
-    window: { isSecureContext: secure, location: { href: scope }, addEventListener() {} }, URL,
+    window: { workoutUpdates: workout, isSecureContext: secure, location: { href: scope, reload() { reloads += 1; } }, addEventListener() {} }, URL,
+    MessageChannel: TestMessageChannel,
+    setTimeout(callback) { const id = timers.size + 1; timers.set(id, callback); return id; },
+    clearTimeout(id) { timers.delete(id); },
   });
   await new Promise((resolve) => setImmediate(resolve));
   return {
     text: () => status.textContent,
+    updateText: () => updateStatus.textContent,
+    button,
+    locked: () => locked,
+    reloads: () => reloads,
+    setBusy(value) { busy = value; workout.onChange(); },
+    click() { button.click(); },
+    activated() { registration.waiting = null; listeners.controllerchange(); },
+    async decline() { replyPort.postMessage({ ok: false, reason: "Another workout is active." }); await new Promise((resolve) => setImmediate(resolve)); },
+    expire() { for (const callback of [...timers.values()]) callback(); },
     requests,
-    report(ready, source = controller) {
-      listeners.message({ source, data: { type: "OFFLINE_STATUS", ready } });
+    report(ready, source = controller, version = "v3") {
+      listeners.message({ source, data: { type: "OFFLINE_STATUS", ready, version } });
     },
   };
 }
@@ -209,9 +253,132 @@ test("failed registration is reported without affecting workout code", async () 
   assert.match(page.text(), /could not be saved/);
 });
 
-test("a waiting update asks for reopening after the workout and preserves offline readiness", async () => {
+test("a saved update offers a button and preserves offline readiness", async () => {
   const page = await createStatus({ waiting: true });
   page.report(true);
   assert.match(page.text(), /Ready for offline use/);
-  assert.match(page.text(), /After your workout, close all timer windows/);
+  assert.match(page.updateText(), /Tap Update app/);
+  assert.equal(page.button.hidden, false);
+  assert.equal(page.button.disabled, false);
+});
+
+test("running or paused workouts cannot use Update app", async () => {
+  const page = await createStatus({ waiting: true });
+  page.setBusy(true);
+  page.click();
+  assert.equal(page.button.disabled, true);
+  assert.equal(page.requests.some((request) => request.type === "APPLY_UPDATE"), false);
+  assert.equal(page.locked(), false);
+  page.setBusy(false);
+  assert.equal(page.button.disabled, false);
+});
+
+test("Update app locks controls, ignores duplicate taps, and reloads only after activation", async () => {
+  const page = await createStatus({ waiting: true });
+  page.click();
+  page.click();
+  assert.equal(page.locked(), true);
+  assert.equal(page.button.disabled, true);
+  assert.equal(page.requests.filter((request) => request.type === "APPLY_UPDATE").length, 1);
+  assert.equal(page.reloads(), 0);
+  page.activated();
+  assert.equal(page.reloads(), 1);
+});
+
+test("a worker change never refreshes a window whose user did not request it", async () => {
+  const page = await createStatus({ waiting: true });
+  page.activated();
+  assert.equal(page.reloads(), 0);
+  page.report(true, undefined, "v4");
+  assert.equal(page.button.hidden, false);
+  page.setBusy(true);
+  page.click();
+  assert.equal(page.reloads(), 0);
+  page.setBusy(false);
+  page.click();
+  assert.equal(page.reloads(), 1);
+});
+
+test("a declined or timed-out update restores controls and permits another attempt", async () => {
+  const page = await createStatus({ waiting: true });
+  page.click();
+  await page.decline();
+  assert.equal(page.locked(), false);
+  assert.equal(page.button.disabled, false);
+  assert.match(page.updateText(), /Another workout/);
+  page.click();
+  page.expire();
+  assert.equal(page.locked(), false);
+  assert.equal(page.button.disabled, false);
+  assert.match(page.updateText(), /did not finish/);
+});
+
+function timerClient(busy = false, url = scope) {
+  return {
+    url, locked: false,
+    postMessage(message, ports) {
+      if (message.type === "LOCK_FOR_UPDATE") {
+        this.locked = !busy;
+        ports[0].postMessage({ allowed: !busy });
+      } else if (message.type === "UNLOCK_UPDATE") this.locked = false;
+    },
+    navigate() { assert.fail("The worker must never navigate an open workout"); },
+  };
+}
+
+test("future updates wait until all in-scope windows agree and lock their controls", async () => {
+  const clients = [timerClient(), timerClient(), timerClient(true, "https://example.test/other/")];
+  const worker = createWorker({ version: "v4", active: true, clients });
+  await worker.lifecycle("install");
+  assert.equal(worker.activations(), 0);
+  assert.equal((await worker.apply()).ok, true);
+  assert.equal(worker.activations(), 1);
+  assert.equal(clients[0].locked, true);
+  assert.equal(clients[1].locked, true);
+  assert.equal(clients[2].locked, false);
+});
+
+test("another busy window blocks activation and releases the idle windows", async () => {
+  const clients = [timerClient(), timerClient(true)];
+  const worker = createWorker({ version: "v4", active: true, clients });
+  await worker.lifecycle("install");
+  assert.equal((await worker.apply()).ok, false);
+  assert.equal(worker.activations(), 0);
+  assert.ok(clients.every((client) => !client.locked));
+});
+
+test("an unresponsive older window blocks activation instead of losing its workout", async () => {
+  const worker = createWorker({ version: "v4", active: true, clients: [{ url: scope, postMessage() {} }] });
+  await worker.lifecycle("install");
+  assert.equal((await worker.apply()).ok, false);
+  assert.equal(worker.activations(), 0);
+});
+
+test("an incomplete saved update cannot activate", async () => {
+  const worker = createWorker({ version: "v4", active: true, clients: [timerClient()] });
+  await worker.lifecycle("install");
+  [...worker.storage.values()][0].delete(scope + "app.js");
+  assert.equal((await worker.apply()).ok, false);
+  assert.equal(worker.activations(), 0);
+});
+
+test("the v3 bridge advances only the helper and keeps legacy files for open pages", async () => {
+  const old = createWorker({ version: "v2" });
+  await old.lifecycle("install");
+  const oldName = [...old.storage.keys()][0];
+  const next = createWorker({ storage: old.storage, version: "v3", active: true, clients: [timerClient(true)] });
+  await next.lifecycle("install");
+  assert.equal(next.activations(), 1);
+  await next.lifecycle("activate");
+  assert.ok(next.storage.has(oldName));
+  old.disconnect();
+  assert.equal((await old.request(scope)).ok, true);
+  const broken = createWorker({ version: "v3", active: true, failFile: "app.js" });
+  await assert.rejects(broken.lifecycle("install"));
+  assert.equal(broken.activations(), 0);
+});
+
+test("the page version matches its worker release", () => {
+  const version = workerScript.match(/\$\{CACHE_PREFIX\}(v\d+)/)[1];
+  assert.ok(readFileSync(join(root, "index.html"), "utf8").includes(`data-app-version="${version}"`));
 });
