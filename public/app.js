@@ -1,4 +1,3 @@
-const soundButton = document.querySelector("#sound-button");
 const soundStatus = document.querySelector("#sound-status");
 const timeDisplay = document.querySelector("#time-display");
 const timerStatus = document.querySelector("#timer-status");
@@ -8,13 +7,20 @@ const resetButton = document.querySelector("#reset-button");
 const phaseDisplay = document.querySelector("#phase-display");
 const roundDisplay = document.querySelector("#round-display");
 const settingsSaveStatus = document.querySelector("#settings-save-status");
-const settingFields = [
-  { key: "exerciseSeconds", input: document.querySelector("#exercise-seconds"), error: document.querySelector("#exercise-error"), max: 3600 },
-  { key: "restSeconds", input: document.querySelector("#rest-seconds"), error: document.querySelector("#rest-error"), max: 3600 },
-  { key: "rounds", input: document.querySelector("#rounds"), error: document.querySelector("#rounds-error"), max: 99 },
-];
+const exerciseList = document.querySelector("#exercise-list");
+const addExerciseButton = document.querySelector("#add-exercise");
+const roundsInput = document.querySelector("#rounds");
+const roundsError = document.querySelector("#rounds-error");
+const restField = {
+  minutes: document.querySelector("#rest-minutes"),
+  seconds: document.querySelector("#rest-seconds"),
+  error: document.querySelector("#rest-error"),
+};
+const exerciseFields = [];
+let nextExerciseId = 0;
+const maxExercises = 99;
 
-const settingsStorageKey = "interval-timer.settings.v1";
+const settingsStorageKey = "interval-timer.settings.v2";
 let settingsStorageAvailable = true;
 let settings = readSavedSettings();
 let settingsValid = true;
@@ -45,20 +51,30 @@ window.workoutUpdates = {
 };
 
 function readSavedSettings() {
-  const defaults = { exerciseSeconds: 10, restSeconds: 5, rounds: 2 };
+  const defaults = { exercises: [10], restSeconds: 5, rounds: 2 };
   let raw;
+  let legacy = false;
   try {
     raw = localStorage.getItem(settingsStorageKey);
+    if (raw === null) {
+      raw = localStorage.getItem("interval-timer.settings.v1");
+      legacy = true;
+    }
   } catch {
     settingsStorageAvailable = false;
     return defaults;
   }
   try {
-    const saved = JSON.parse(raw);
-    if (saved && !Array.isArray(saved) && settingFields.every(({ key, max }) =>
-      Number.isInteger(saved[key]) && saved[key] >= 1 && saved[key] <= max)) {
-      // Restore just the three settings, never timer progress or unknown fields.
-      return Object.fromEntries(settingFields.map(({ key }) => [key, saved[key]]));
+    let saved = JSON.parse(raw);
+    if (legacy && saved && !Array.isArray(saved)) {
+      saved = { exercises: [saved.exerciseSeconds], restSeconds: saved.restSeconds, rounds: saved.rounds };
+    }
+    const validTime = (value) => Number.isInteger(value) && value >= 1 && value <= 3600;
+    if (saved && Array.isArray(saved.exercises) && saved.exercises.length >= 1
+        && saved.exercises.length <= maxExercises && saved.exercises.every(validTime)
+        && validTime(saved.restSeconds) && Number.isInteger(saved.rounds) && saved.rounds >= 1 && saved.rounds <= 99) {
+      // Restore just workout choices, never timer progress or unknown fields.
+      return { exercises: [...saved.exercises], restSeconds: saved.restSeconds, rounds: saved.rounds };
     }
   } catch {
     // Invalid saved data falls back to the normal first-use settings.
@@ -78,7 +94,10 @@ function saveSettings() {
 function buildWorkout(values) {
   const phases = [];
   for (let round = 1; round <= values.rounds; round += 1) {
-    phases.push({ phase: "Exercise", round, durationMs: values.exerciseSeconds * 1000 });
+    values.exercises.forEach((seconds, index) => {
+      const phase = values.exercises.length === 1 ? "Exercise" : `Exercise ${index + 1} of ${values.exercises.length}`;
+      phases.push({ phase, round, durationMs: seconds * 1000 });
+    });
     if (round < values.rounds) {
       phases.push({ phase: "Rest", round, durationMs: values.restSeconds * 1000 });
     }
@@ -87,22 +106,19 @@ function buildWorkout(values) {
 }
 
 function applySettings(remember = true) {
-  if (timerState === "running" || timerState === "paused") return;
-  const nextSettings = {};
+  if (timerState === "running" || timerState === "paused" || applyingAppUpdate) return;
   settingsValid = true;
-  for (const field of settingFields) {
-    const raw = field.input.value.trim();
-    const value = Number(raw);
-    const valid = raw !== "" && Number.isInteger(value) && value >= 1 && value <= field.max;
-    const message = valid ? "" : `Enter a whole number from 1 to ${field.max.toLocaleString("en-US")}.`;
-    if (field.error.textContent !== message) field.error.textContent = message;
-    field.input.setAttribute("aria-invalid", String(!valid));
-    if (!valid) settingsValid = false;
-    nextSettings[field.key] = value;
-  }
+  const exercises = exerciseFields.map(readDuration);
+  const restSeconds = readDuration(restField);
+  const rawRounds = roundsInput.value.trim();
+  const rounds = Number(rawRounds);
+  const validRounds = /^\d+$/.test(rawRounds) && Number.isInteger(rounds) && rounds >= 1 && rounds <= 99;
+  roundsInput.setAttribute("aria-invalid", String(!validRounds));
+  roundsError.textContent = validRounds ? "" : "Enter a whole number from 1 to 99.";
+  if (!validRounds) settingsValid = false;
   timerState = "ready";
   if (settingsValid) {
-    settings = nextSettings;
+    settings = { exercises, restSeconds, rounds };
     if (remember) saveSettings();
     workout = buildWorkout(settings);
     phaseIndex = 0;
@@ -110,6 +126,75 @@ function applySettings(remember = true) {
     lastCueSecond = undefined;
   }
   renderTimer();
+}
+
+function readDuration(field) {
+  const minutes = field.minutes.value.trim();
+  const seconds = field.seconds.value.trim();
+  const total = Number(minutes) * 60 + Number(seconds);
+  const valid = /^\d{1,2}$/.test(minutes) && /^\d{1,2}$/.test(seconds)
+    && Number(seconds) <= 59 && total >= 1 && total <= 3600;
+  for (const input of [field.minutes, field.seconds]) input.setAttribute("aria-invalid", String(!valid));
+  const message = valid ? "" : "Enter 00:01–60:00; seconds 00–59.";
+  if (field.error.textContent !== message) field.error.textContent = message;
+  if (!valid) settingsValid = false;
+  return total;
+}
+
+function writeDuration(field, seconds) {
+  field.minutes.value = String(Math.floor(seconds / 60)).padStart(2, "0");
+  field.seconds.value = String(seconds % 60).padStart(2, "0");
+}
+
+function bindDuration(field) {
+  for (const input of [field.minutes, field.seconds]) {
+    input.addEventListener("input", () => applySettings());
+    input.addEventListener("blur", () => {
+      if (/^\d{1,2}$/.test(input.value)) input.value = input.value.padStart(2, "0");
+    });
+  }
+}
+
+function addExercise(seconds) {
+  const prefix = `exercise-${++nextExerciseId}`;
+  const row = document.createElement("div");
+  row.className = "exercise-row";
+  row.innerHTML = `
+    <span id="${prefix}-label"></span>
+    <div class="time-inputs" role="group" aria-labelledby="${prefix}-label">
+      <input id="${prefix}-minutes" type="text" inputmode="numeric" pattern="[0-9]{1,2}" maxlength="2" aria-describedby="${prefix}-error" required>
+      <span aria-hidden="true">:</span>
+      <input id="${prefix}-seconds" type="text" inputmode="numeric" pattern="[0-9]{1,2}" maxlength="2" aria-describedby="${prefix}-error" required>
+    </div>
+    <button id="${prefix}-remove" class="remove-exercise" type="button">×</button>
+    <p id="${prefix}-error" class="field-error" aria-live="polite"></p>`;
+  exerciseList.append(row);
+  const field = {
+    row, label: row.querySelector(`#${prefix}-label`),
+    minutes: row.querySelector(`#${prefix}-minutes`), seconds: row.querySelector(`#${prefix}-seconds`),
+    error: row.querySelector(`#${prefix}-error`), remove: row.querySelector(`#${prefix}-remove`),
+  };
+  exerciseFields.push(field);
+  writeDuration(field, seconds);
+  bindDuration(field);
+  field.remove.addEventListener("click", () => {
+    if (window.workoutUpdates.isBusy() || applyingAppUpdate || exerciseFields.length === 1) return;
+    exerciseFields.splice(exerciseFields.indexOf(field), 1);
+    row.remove();
+    labelExercises();
+    applySettings();
+  });
+  labelExercises();
+}
+
+function labelExercises() {
+  exerciseFields.forEach((field, index) => {
+    field.label.textContent = `Exercise ${index + 1}`;
+    field.minutes.setAttribute("aria-label", `Exercise ${index + 1} minutes`);
+    field.seconds.setAttribute("aria-label", `Exercise ${index + 1} seconds`);
+    field.remove.setAttribute("aria-label", `Remove exercise ${index + 1}`);
+    field.remove.hidden = exerciseFields.length === 1;
+  });
 }
 
 // Ask supporting browsers to mix our beep with music from other apps.
@@ -122,7 +207,7 @@ if ("audioSession" in navigator) {
 }
 
 async function prepareAudio() {
-  // Prepare audio inside Start, Resume, or a test tap so it can play later.
+  // Prepare audio inside Start or Resume so it can play later.
   if (!audioContext) {
     audioContext = new AudioContext();
   }
@@ -184,7 +269,14 @@ function renderTimer() {
   pauseButton.disabled = (!active) || applyingAppUpdate;
   resetButton.disabled = applyingAppUpdate;
   pauseButton.textContent = timerState === "paused" ? "Resume" : "Pause";
-  for (const field of settingFields) field.input.disabled = active || applyingAppUpdate;
+  const locked = active || applyingAppUpdate;
+  for (const field of [...exerciseFields, restField]) {
+    field.minutes.disabled = locked;
+    field.seconds.disabled = locked;
+    if (field.remove) field.remove.disabled = locked;
+  }
+  roundsInput.disabled = locked;
+  addExerciseButton.disabled = locked || !settingsValid || exerciseFields.length >= maxExercises;
   const saveMessage = settingsStorageAvailable
     ? ""
     : "Settings cannot be remembered here. You can still use the timer.";
@@ -214,7 +306,7 @@ function playWorkoutCue(kind = "phase") {
     activeWorkoutTones.add(tone);
   } catch (error) {
     const event = kind === "complete" ? "Workout finished" : "Workout continues";
-    soundStatus.textContent = `${event}, but sound was unavailable. Try the sound test.`;
+    soundStatus.textContent = `${event}, but sound was unavailable. Check volume, then pause and resume to retry.`;
     console.warn("Workout sound failed.", error);
   }
 }
@@ -257,14 +349,16 @@ function runCountdown(starting = false) {
   const runId = ++audioRunId;
   // Audio preparation must not delay the timer or undo a Reset click.
   prepareAudio().then(() => {
+    if (runId !== audioRunId || timerState !== "running") return;
+    soundStatus.textContent = "";
     // Play the opening "3" only while that same starting countdown is active.
-    if (starting && runId === audioRunId && timerState === "running" && phaseIndex === -1
+    if (starting && phaseIndex === -1
         && Math.ceil((finishAt - performance.now()) / 1000) === 3) {
       playWorkoutCue("tick");
     }
   }).catch((error) => {
     if (runId !== audioRunId) return;
-    soundStatus.textContent = "The workout will continue, but sound could not start. Try the sound test.";
+    soundStatus.textContent = "Sound could not start. Check volume, then pause and resume to retry.";
     console.warn("Workout audio could not start.", error);
   });
   timerState = "running";
@@ -279,6 +373,7 @@ startButton.addEventListener("click", () => {
   applySettings();
   if (!settingsValid) return;
   stopUpdates();
+  soundStatus.textContent = "";
   phaseIndex = -1;
   remainingMs = preparationMs;
   lastCueSecond = 3;
@@ -306,25 +401,15 @@ resetButton.addEventListener("click", () => {
   applySettings();
 });
 
-soundButton.addEventListener("click", async () => {
-  soundButton.disabled = true;
-  soundStatus.textContent = "Preparing sound…";
-  try {
-    await prepareAudio();
-    playBeep({ onFinished: () => {
-      soundButton.disabled = false;
-      soundStatus.textContent = "Test finished.";
-    } });
-    soundStatus.textContent = "Playing a short beep…";
-  } catch (error) {
-    soundButton.disabled = false;
-    soundStatus.textContent = "Sound could not start. Check volume and try again.";
-    console.error("Sound test failed.", error);
-  }
+addExerciseButton.addEventListener("click", () => {
+  if (window.workoutUpdates.isBusy() || applyingAppUpdate || !settingsValid || exerciseFields.length >= maxExercises) return;
+  addExercise(settings.exercises.at(-1));
+  applySettings();
 });
 
-for (const field of settingFields) {
-  field.input.value = String(settings[field.key]);
-  field.input.addEventListener("input", () => applySettings());
-}
+settings.exercises.forEach(addExercise);
+writeDuration(restField, settings.restSeconds);
+roundsInput.value = String(settings.rounds);
+bindDuration(restField);
+roundsInput.addEventListener("input", () => applySettings());
 applySettings(false);

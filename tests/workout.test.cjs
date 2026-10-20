@@ -11,11 +11,12 @@ const script = readFileSync(join(__dirname, "../public/app.js"), "utf8");
 function createPage({ audioAllowed = true, storage = new Map(), storageReadFails = false, storageWriteFails = false } = {}) {
   let now = 0;
   let nextInterval = 0;
+  let nextNode = 0;
   const intervals = new Map();
   const elements = new Map();
   const cues = [];
   const window = {};
-  const defaultValues = { "#exercise-seconds": "10", "#rest-seconds": "5", "#rounds": "2" };
+  const defaultValues = { "#exercise-1-seconds": "10", "#rest-seconds": "5", "#rounds": "2" };
 
   function element(selector) {
     if (!elements.has(selector)) {
@@ -26,6 +27,9 @@ function createPage({ audioAllowed = true, storage = new Map(), storageReadFails
         attributes: {},
         setAttribute(name, value) { this.attributes[name] = value; },
         addEventListener(event, action) { this[event] = action; },
+        querySelector: element,
+        append() {},
+        remove() {},
       });
     }
     return elements.get(selector);
@@ -66,7 +70,7 @@ function createPage({ audioAllowed = true, storage = new Map(), storageReadFails
 
   runInNewContext(script, {
     window,
-    document: { querySelector: element },
+    document: { querySelector: element, createElement: () => element(`#node-${++nextNode}`) },
     navigator: { audioSession: {} },
     localStorage: {
       getItem(key) {
@@ -92,6 +96,8 @@ function createPage({ audioAllowed = true, storage = new Map(), storageReadFails
     enabled: (id) => !element(`#${id}`).disabled,
     value: (id) => element(`#${id}`).value,
     invalid: (id) => element(`#${id}`).attributes["aria-invalid"] === "true",
+    hidden: (id) => element(`#${id}`).hidden,
+    blur(id) { element(`#${id}`).blur(); },
     change(id, value) {
       const input = element(`#${id}`);
       if (input.disabled) return;
@@ -217,17 +223,11 @@ test("Unavailable audio does not prevent visual workout completion", async () =>
   assert.match(page.text("sound-status"), /sound was unavailable/);
 });
 
-test("The separate sound-test button still plays and becomes available again", async () => {
-  const page = createPage();
-  await page.click("sound-button");
-  assert.equal(page.cues.length, 1);
-  assert.equal(page.enabled("sound-button"), true);
-  assert.match(page.text("sound-status"), /Test finished/);
-});
-
 function configure(page, exercise = 3, rest = 2, rounds = 3) {
-  page.change("exercise-seconds", exercise);
-  page.change("rest-seconds", rest);
+  page.change("exercise-1-minutes", Math.floor(exercise / 60));
+  page.change("exercise-1-seconds", exercise % 60);
+  page.change("rest-minutes", Math.floor(rest / 60));
+  page.change("rest-seconds", rest % 60);
   page.change("rounds", rounds);
 }
 
@@ -264,7 +264,7 @@ test("Settings lock while running or paused; Reset keeps choices and unlocks the
   configure(page);
   startExercise(page);
   page.advance(3_500);
-  for (const id of ["exercise-seconds", "rest-seconds", "rounds"]) {
+  for (const id of ["exercise-1-seconds", "rest-seconds", "rounds"]) {
     assert.equal(page.enabled(id), false);
   }
   page.change("rounds", 8);
@@ -272,20 +272,20 @@ test("Settings lock while running or paused; Reset keeps choices and unlocks the
   page.click("pause-button");
   assert.equal(page.enabled("rounds"), false);
   page.click("reset-button");
-  assert.equal(page.value("exercise-seconds"), "3");
+  assert.equal(page.value("exercise-1-seconds"), "3");
   assert.equal(page.value("rest-seconds"), "2");
   assert.equal(page.value("rounds"), "3");
   assert.equal(page.enabled("rounds"), true);
   page.advance(20_000);
   expectDisplay(page, "Exercise", 1, "00:03", "Ready", 3);
-  page.change("exercise-seconds", 4);
+  page.change("exercise-1-seconds", 4);
   expectDisplay(page, "Exercise", 1, "00:04", "Ready", 3);
 });
 
 test("Invalid settings block Start, explain the field, and recover when corrected", () => {
   for (const [id, errorId, correct, tooLarge] of [
-    ["exercise-seconds", "exercise-error", 10, 3601],
-    ["rest-seconds", "rest-error", 5, 3601],
+    ["exercise-1-seconds", "exercise-1-error", 10, 60],
+    ["rest-seconds", "rest-error", 5, 60],
     ["rounds", "rounds-error", 2, 100],
   ]) {
     for (const invalid of ["", 0, -1, 1.5, "abc", "Infinity", "1e100", tooLarge]) {
@@ -295,7 +295,7 @@ test("Invalid settings block Start, explain the field, and recover when correcte
       assert.equal(page.text("time-display"), "--:--");
       assert.equal(page.text("timer-status"), "Check settings");
       assert.equal(page.invalid(id), true);
-      assert.match(page.text(errorId), /Enter a whole number/);
+      assert.match(page.text(errorId), /Enter/);
       page.click("start-button");
       page.advance(30_000);
       assert.equal(page.cues.length, 0);
@@ -322,8 +322,8 @@ test("Editing after completion previews a fresh workout using the new settings",
   configure(page, 1, 1, 1);
   startExercise(page);
   page.advance(1_000);
-  assert.equal(page.enabled("exercise-seconds"), true);
-  page.change("exercise-seconds", 4);
+  assert.equal(page.enabled("exercise-1-seconds"), true);
+  page.change("exercise-1-seconds", 4);
   expectDisplay(page, "Exercise", 1, "00:04", "Ready", 1);
   startExercise(page);
   page.advance(4_000);
@@ -350,7 +350,7 @@ test("Preparation shows and cues 3, 2, 1, then begins the full exercise", async 
   page.click("start-button");
   await settleAudio();
   expectDisplay(page, "Get ready", 1, "00:03", "Running");
-  assert.equal(page.enabled("exercise-seconds"), false);
+  assert.equal(page.enabled("exercise-1-seconds"), false);
   page.advance(1_000);
   expectDisplay(page, "Get ready", 1, "00:02", "Running");
   page.advance(1_000);
@@ -451,8 +451,8 @@ test("Reset during preparation prevents late audio and keeps chosen settings", a
   page.advance(30_000);
   expectDisplay(page, "Exercise", 1, "00:03", "Ready", 3);
   assert.equal(page.cues.length, 0);
-  assert.equal(page.value("exercise-seconds"), "3");
-  assert.equal(page.enabled("exercise-seconds"), true);
+  assert.equal(page.value("exercise-1-seconds"), "3");
+  assert.equal(page.enabled("exercise-1-seconds"), true);
 });
 
 test("Quick Start, Reset, Start cannot play the old countdown's pending opening tick", async () => {
@@ -504,7 +504,7 @@ test("A phase change takes over a late tick without overlapping automatic sounds
   assert.equal(page.cues.at(-1).frequency, 880);
 });
 
-const settingsKey = "interval-timer.settings.v1";
+const settingsKey = "interval-timer.settings.v2";
 
 test("First use has the usual defaults; valid edits are remembered without starting", () => {
   const storage = new Map();
@@ -513,7 +513,7 @@ test("First use has the usual defaults; valid edits are remembered without start
   assert.equal(storage.size, 0, "opening the page does not overwrite saved data");
   configure(first, 8, 7, 2);
   const reopened = createPage({ storage });
-  assert.deepEqual([reopened.value("exercise-seconds"), reopened.value("rest-seconds"), reopened.value("rounds")], ["8", "7", "2"]);
+  assert.deepEqual([reopened.value("exercise-1-seconds"), reopened.value("rest-seconds"), reopened.value("rounds")], ["08", "07", "2"]);
   expectDisplay(reopened, "Exercise", 1, "00:08", "Ready");
 });
 
@@ -523,43 +523,45 @@ test("Incomplete edits keep the last valid workout until all three fields are va
   configure(page, 8, 7, 2);
   const saved = storage.get(settingsKey);
   for (const invalid of ["", "0", "-1", "1.5", "3601"]) {
-    page.change("exercise-seconds", invalid);
+    page.change("exercise-1-seconds", invalid);
     page.change("rest-seconds", "9");
     assert.equal(storage.get(settingsKey), saved);
   }
   expectDisplay(createPage({ storage }), "Exercise", 1, "00:08", "Ready");
-  page.change("exercise-seconds", "4");
-  assert.deepEqual(JSON.parse(storage.get(settingsKey)), { exerciseSeconds: 4, restSeconds: 9, rounds: 2 });
+  page.change("exercise-1-seconds", "4");
+  assert.deepEqual(JSON.parse(storage.get(settingsKey)), { exercises: [4], restSeconds: 9, rounds: 2 });
   expectDisplay(createPage({ storage }), "Exercise", 1, "00:04", "Ready");
 });
 
 test("Malformed, incomplete, or out-of-range saved values fall back to defaults", () => {
   const invalid = ["not JSON", "null", "[]", '"hello"',
-    JSON.stringify({ exerciseSeconds: 0, restSeconds: 7, rounds: 2 }),
-    JSON.stringify({ exerciseSeconds: 3601, restSeconds: 7, rounds: 2 }),
-    JSON.stringify({ exerciseSeconds: "8", restSeconds: 7, rounds: 2 }),
-    JSON.stringify({ exerciseSeconds: 8.5, restSeconds: 7, rounds: 2 }),
-    JSON.stringify({ exerciseSeconds: 8, restSeconds: -1, rounds: 2 }),
-    JSON.stringify({ exerciseSeconds: 8, restSeconds: 7, rounds: 100 }),
-    JSON.stringify({ exerciseSeconds: 8, restSeconds: 7 }),
+    JSON.stringify({ exercises: [], restSeconds: 7, rounds: 2 }),
+    JSON.stringify({ exercises: [0], restSeconds: 7, rounds: 2 }),
+    JSON.stringify({ exercises: [3601], restSeconds: 7, rounds: 2 }),
+    JSON.stringify({ exercises: ["8"], restSeconds: 7, rounds: 2 }),
+    JSON.stringify({ exercises: [8.5], restSeconds: 7, rounds: 2 }),
+    JSON.stringify({ exercises: [8], restSeconds: -1, rounds: 2 }),
+    JSON.stringify({ exercises: [8], restSeconds: 7, rounds: 100 }),
+    JSON.stringify({ exercises: [8], restSeconds: 7 }),
   ];
   for (const raw of invalid) {
     const storage = new Map([[settingsKey, raw]]);
     const page = createPage({ storage });
     expectDisplay(page, "Exercise", 1, "00:10", "Ready");
     assert.equal(storage.get(settingsKey), raw);
-    page.change("exercise-seconds", "6");
-    assert.equal(JSON.parse(storage.get(settingsKey)).exerciseSeconds, 6);
+    page.change("exercise-1-seconds", "6");
+    assert.deepEqual(JSON.parse(storage.get(settingsKey)).exercises, [6]);
   }
 });
 
 test("Valid boundary values are restored and extra saved fields are not used or resaved", () => {
-  for (const values of [{ exerciseSeconds: 1, restSeconds: 1, rounds: 1 },
-    { exerciseSeconds: 3600, restSeconds: 3600, rounds: 99 }]) {
+  for (const values of [{ exercises: [1], restSeconds: 1, rounds: 1 },
+    { exercises: [3600], restSeconds: 3600, rounds: 99 }]) {
     const storage = new Map([[settingsKey, JSON.stringify({ ...values, timerState: "running", remainingMs: 1 })]]);
     const page = createPage({ storage });
-    assert.equal(page.value("exercise-seconds"), String(values.exerciseSeconds));
-    assert.equal(page.value("rest-seconds"), String(values.restSeconds));
+    assert.equal(page.value("exercise-1-minutes"), String(Math.floor(values.exercises[0] / 60)).padStart(2, "0"));
+    assert.equal(page.value("exercise-1-seconds"), String(values.exercises[0] % 60).padStart(2, "0"));
+    assert.equal(page.value("rest-seconds"), String(values.restSeconds % 60).padStart(2, "0"));
     assert.equal(page.value("rounds"), String(values.rounds));
     assert.equal(page.text("timer-status"), "Ready");
     page.click("reset-button");
@@ -581,7 +583,7 @@ test("Reopening a running or paused workout restores choices and starts ready fr
     assert.equal(reopened.enabled("pause-button"), false);
     page.click("reset-button");
     expectDisplay(page, "Exercise", 1, "00:08", "Ready");
-    assert.deepEqual(JSON.parse(storage.get(settingsKey)), { exerciseSeconds: 8, restSeconds: 7, rounds: 2 });
+    assert.deepEqual(JSON.parse(storage.get(settingsKey)), { exercises: [8], restSeconds: 7, rounds: 2 });
   }
 });
 
@@ -625,10 +627,183 @@ test("applying an update blocks starting and Reset, then failure restores contro
   assert.equal(page.updates.begin(), true);
   assert.equal(page.enabled("start-button"), false);
   assert.equal(page.enabled("reset-button"), false);
-  page.change("exercise-seconds", "8");
+  page.change("exercise-1-seconds", "8");
   page.click("start-button");
   expectDisplay(page, "Exercise", 1, "00:05", "Ready", 3);
   page.updates.end();
   assert.equal(page.enabled("start-button"), true);
   assert.equal(page.enabled("reset-button"), true);
+});
+
+test("05:30 is entered as minutes and seconds and runs for the full 330 seconds", () => {
+  const page = createPage();
+  configure(page, 330, 75, 2);
+  expectDisplay(page, "Exercise", 1, "05:30", "Ready");
+  startExercise(page);
+  page.advance(329_999);
+  expectDisplay(page, "Exercise", 1, "00:01", "Running");
+  page.advance(1);
+  expectDisplay(page, "Rest", 1, "01:15", "Running");
+});
+
+test("time fields reject invalid minutes, seconds above 59, and durations over 60:00", () => {
+  const storage = new Map();
+  const page = createPage({ storage });
+  configure(page, 8, 7, 2);
+  const saved = storage.get(settingsKey);
+  for (const value of ["", "-1", "1.5", "1e1", "61", "abc"]) {
+    page.change("exercise-1-minutes", value);
+    assert.equal(page.enabled("start-button"), false);
+    assert.equal(storage.get(settingsKey), saved);
+  }
+  page.change("exercise-1-minutes", "60");
+  assert.equal(page.enabled("start-button"), false, "60:08 is over the existing one-hour limit");
+  page.change("exercise-1-seconds", "00");
+  expectDisplay(page, "Exercise", 1, "60:00", "Ready");
+  page.change("rest-seconds", "60");
+  assert.equal(page.enabled("start-button"), false);
+  page.change("rest-seconds", "59");
+  assert.equal(page.enabled("start-button"), true);
+});
+
+test("leaving a time field pads it to two digits without changing its duration", () => {
+  const page = createPage();
+  configure(page, 330, 5, 2);
+  page.blur("exercise-1-minutes");
+  page.blur("rest-seconds");
+  assert.equal(page.value("exercise-1-minutes"), "05");
+  assert.equal(page.value("exercise-1-seconds"), "30");
+  assert.equal(page.value("rest-seconds"), "05");
+  expectDisplay(page, "Exercise", 1, "05:30", "Ready");
+});
+
+test("two exercises run consecutively, rest once per round, and skip final rest", () => {
+  const page = createPage();
+  configure(page, 3, 1, 2);
+  page.click("add-exercise");
+  page.change("exercise-2-seconds", "2");
+  startExercise(page);
+  expectDisplay(page, "Exercise 1 of 2", 1, "00:03", "Running");
+  page.advance(3_000);
+  expectDisplay(page, "Exercise 2 of 2", 1, "00:02", "Running");
+  page.advance(2_000);
+  expectDisplay(page, "Rest", 1, "00:01", "Running");
+  page.advance(1_000);
+  expectDisplay(page, "Exercise 1 of 2", 2, "00:03", "Running");
+  page.advance(3_000);
+  expectDisplay(page, "Exercise 2 of 2", 2, "00:02", "Running");
+  page.advance(2_000);
+  expectDisplay(page, "Complete", 2, "00:00", "Finished");
+  assert.equal(page.cues.filter((cue) => cue.frequency === 880).length, 5);
+  assert.equal(page.cues.filter((cue) => cue.frequency === 660).length, 1);
+});
+
+test("one round completes all exercises without any rest", () => {
+  const page = createPage();
+  configure(page, 1, 99, 1);
+  page.click("add-exercise");
+  page.click("add-exercise");
+  startExercise(page);
+  page.advance(1_000);
+  expectDisplay(page, "Exercise 2 of 3", 1, "00:01", "Running", 1);
+  page.advance(1_000);
+  expectDisplay(page, "Exercise 3 of 3", 1, "00:01", "Running", 1);
+  page.advance(1_000);
+  expectDisplay(page, "Complete", 1, "00:00", "Finished", 1);
+});
+
+test("pausing the second exercise preserves its position and fractional remaining time", () => {
+  const page = createPage();
+  configure(page, 2, 1, 1);
+  page.click("add-exercise");
+  page.change("exercise-2-seconds", "4");
+  startExercise(page);
+  page.advance(3_300);
+  page.click("pause-button");
+  page.advance(30_000);
+  expectDisplay(page, "Exercise 2 of 2", 1, "00:03", "Paused", 1);
+  page.click("pause-button");
+  page.advance(2_699);
+  expectDisplay(page, "Exercise 2 of 2", 1, "00:01", "Running", 1);
+  page.advance(1);
+  expectDisplay(page, "Complete", 1, "00:00", "Finished", 1);
+});
+
+test("exercise editing is locked during workouts and updates, then restored after Reset", () => {
+  const page = createPage();
+  page.click("add-exercise");
+  for (const paused of [false, true]) {
+    page.click("start-button");
+    if (paused) page.click("pause-button");
+    for (const id of ["add-exercise", "exercise-1-remove", "exercise-2-minutes", "exercise-2-seconds", "rest-minutes"]) {
+      assert.equal(page.enabled(id), false);
+    }
+    page.click("reset-button");
+    expectDisplay(page, "Exercise 1 of 2", 1, "00:10", "Ready");
+  }
+  assert.equal(page.updates.begin(), true);
+  assert.equal(page.enabled("add-exercise"), false);
+  assert.equal(page.enabled("exercise-2-remove"), false);
+  page.updates.end();
+  assert.equal(page.enabled("add-exercise"), true);
+});
+
+test("removing an exercise keeps the remaining duration, renumbers it, and remembers the result", () => {
+  const storage = new Map();
+  const page = createPage({ storage });
+  page.click("add-exercise");
+  page.change("exercise-2-minutes", "5");
+  page.change("exercise-2-seconds", "30");
+  page.click("exercise-1-remove");
+  assert.equal(page.text("exercise-2-label"), "Exercise 1");
+  assert.equal(page.hidden("exercise-2-remove"), true);
+  expectDisplay(page, "Exercise", 1, "05:30", "Ready");
+  expectDisplay(createPage({ storage }), "Exercise", 1, "05:30", "Ready");
+  page.click("exercise-2-remove");
+  assert.deepEqual(JSON.parse(storage.get(settingsKey)).exercises, [330]);
+});
+
+test("all exercise durations and their order survive reopening, including invalid edits", () => {
+  const storage = new Map();
+  const page = createPage({ storage });
+  configure(page, 330, 90, 3);
+  page.click("add-exercise");
+  page.change("exercise-2-minutes", "1");
+  page.change("exercise-2-seconds", "15");
+  const saved = storage.get(settingsKey);
+  page.change("exercise-2-seconds", "60");
+  assert.equal(storage.get(settingsKey), saved);
+  const reopened = createPage({ storage });
+  assert.deepEqual([reopened.value("exercise-1-minutes"), reopened.value("exercise-1-seconds"),
+    reopened.value("exercise-2-minutes"), reopened.value("exercise-2-seconds")], ["05", "30", "01", "15"]);
+  assert.equal(reopened.value("rest-minutes"), "01");
+  assert.equal(reopened.value("rest-seconds"), "30");
+  expectDisplay(reopened, "Exercise 1 of 2", 1, "05:30", "Ready", 3);
+});
+
+test("old saved settings become Exercise 1 without overwriting the old version's data", () => {
+  const legacyKey = "interval-timer.settings.v1";
+  const old = JSON.stringify({ exerciseSeconds: 330, restSeconds: 75, rounds: 3 });
+  const storage = new Map([[legacyKey, old]]);
+  const page = createPage({ storage });
+  expectDisplay(page, "Exercise", 1, "05:30", "Ready", 3);
+  assert.equal(page.value("rest-minutes"), "01");
+  assert.equal(page.value("rest-seconds"), "15");
+  assert.equal(storage.has(settingsKey), false, "opening does not overwrite storage");
+  page.click("add-exercise");
+  assert.deepEqual(JSON.parse(storage.get(settingsKey)), { exercises: [330, 330], restSeconds: 75, rounds: 3 });
+  assert.equal(storage.get(legacyKey), old);
+});
+
+test("invalid old storage falls back cleanly and valid new storage takes priority", () => {
+  for (const raw of ["broken", "[]", JSON.stringify({ exerciseSeconds: 0, restSeconds: 5, rounds: 2 })]) {
+    const page = createPage({ storage: new Map([["interval-timer.settings.v1", raw]]) });
+    expectDisplay(page, "Exercise", 1, "00:10", "Ready");
+    assert.equal(page.text("settings-save-status"), "");
+  }
+  const page = createPage({ storage: new Map([
+    ["interval-timer.settings.v1", JSON.stringify({ exerciseSeconds: 10, restSeconds: 5, rounds: 2 })],
+    [settingsKey, JSON.stringify({ exercises: [8, 7], restSeconds: 6, rounds: 3 })],
+  ]) });
+  expectDisplay(page, "Exercise 1 of 2", 1, "00:08", "Ready", 3);
 });

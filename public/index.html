@@ -16,23 +16,24 @@
     <script src="app.js" defer></script>
     <script src="offline.js" defer></script>
   </head>
-  <body data-app-version="v6">
+  <body data-app-version="v7">
     <main>
       <header>
         <h1>Interval Timer</h1>
         <p id="offline-status" role="status">Preparing offline use…</p>
       </header>
       <fieldset class="settings">
-        <legend>Workout</legend>
-        <div class="settings-grid">
+        <legend>Workout <span>min : sec</span></legend>
+        <div id="exercise-list"></div>
+        <button id="add-exercise" class="quiet" type="button">+ Add exercise</button>
+        <div class="settings-bottom">
           <div>
-            <label for="exercise-seconds">Exercise <span>(seconds)</span></label>
-            <input id="exercise-seconds" type="number" inputmode="numeric" min="1" max="3600" step="1" value="10" required aria-describedby="exercise-error">
-            <p id="exercise-error" class="field-error" aria-live="polite"></p>
-          </div>
-          <div>
-            <label for="rest-seconds">Rest <span>(seconds)</span></label>
-            <input id="rest-seconds" type="number" inputmode="numeric" min="1" max="3600" step="1" value="5" required aria-describedby="rest-error">
+            <label id="rest-label">Rest after exercises</label>
+            <div class="time-inputs" role="group" aria-labelledby="rest-label">
+              <input id="rest-minutes" type="text" inputmode="numeric" pattern="[0-9]{1,2}" maxlength="2" value="00" aria-label="Rest minutes" aria-describedby="rest-error" required>
+              <span aria-hidden="true">:</span>
+              <input id="rest-seconds" type="text" inputmode="numeric" pattern="[0-9]{1,2}" maxlength="2" value="05" aria-label="Rest seconds" aria-describedby="rest-error" required>
+            </div>
             <p id="rest-error" class="field-error" aria-live="polite"></p>
           </div>
           <div>
@@ -58,10 +59,7 @@
         <p id="update-status" role="status"></p>
         <button id="update-button" class="secondary" type="button" hidden>Update app</button>
       </section>
-      <footer>
-        <button id="sound-button" class="quiet" type="button">Test sound</button>
-        <p id="sound-status" role="status"></p>
-      </footer>
+      <p id="sound-status" role="status"></p>
     </main>
   </body>
 </html>

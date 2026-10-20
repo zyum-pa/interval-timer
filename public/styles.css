@@ -44,16 +44,20 @@ button:disabled { opacity: 0.55; cursor: default; }
 .settings { margin: 20px 0 0; padding: 12px; border: 1px solid #c4d0c7; border-radius: 14px; }
 
 .settings legend { padding: 0 6px; font-size: 0.875rem; font-weight: 700; }
+.settings legend span { margin-left: 6px; color: #3e625b; font-size: 0.75rem; font-weight: 400; }
 
-.settings-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.exercise-row { display: grid; grid-template-columns: minmax(0, 1fr) 130px 44px; align-items: center; column-gap: 8px; margin-top: 8px; }
+.exercise-row > span { font-size: 0.875rem; font-weight: 650; }
+.exercise-row .field-error { grid-column: 1 / -1; }
+.time-inputs { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 4px; }
+.time-inputs input { text-align: center; padding: 8px 2px; font-variant-numeric: tabular-nums; }
+.settings-bottom { display: grid; grid-template-columns: minmax(0, 1fr) 80px; gap: 18px; margin-top: 4px; }
 
-.settings label { display: flex; flex-direction: column; justify-content: end; min-height: 38px; margin-bottom: 6px; font-size: 0.875rem; font-weight: 650; }
-
-.settings label span { font-size: 0.75rem; font-weight: 400; color: #3e625b; }
+.settings label { display: block; margin-bottom: 6px; font-size: 0.875rem; font-weight: 650; }
 
 .settings input {
   width: 100%;
-  min-height: 50px;
+  min-height: 44px;
   padding: 10px 8px;
   border: 1px solid #71877c;
   border-radius: 8px;
@@ -96,9 +100,9 @@ button:disabled { opacity: 0.55; cursor: default; }
 #update-status { flex: 1; margin: 0; font-size: 0.8rem; }
 #update-button { width: auto; min-height: 48px; padding: 10px 14px; font-size: 0.875rem; flex-shrink: 0; }
 
-footer { margin-top: 8px; text-align: center; }
-.quiet { width: auto; min-height: 44px; padding: 8px 16px; background: transparent; color: #3e625b; font-size: 0.875rem; font-weight: 500; }
-#sound-status { margin: 0; font-size: 0.8rem; color: #3e625b; }
+.quiet { width: auto; min-height: 44px; padding: 8px 0; background: transparent; color: #176b58; font-size: 0.875rem; font-weight: 650; }
+.remove-exercise { width: 44px; min-height: 44px; padding: 0; background: transparent; color: #3e625b; font-size: 1.5rem; font-weight: 400; }
+#sound-status { margin: 8px 0 0; text-align: center; font-size: 0.8rem; color: #3e625b; }
 
 @media (max-height: 700px) {
   body { padding-top: max(12px, env(safe-area-inset-top)); }
