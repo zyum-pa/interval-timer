@@ -39,7 +39,11 @@ function createWorker({ storage = new Map(), version = "v1", failFile, offline =
           if (responses.some((response) => !response.ok)) throw new Error("Incomplete download");
           requests.forEach((request, i) => entries.set(request.url, responses[i]));
         },
-        async match(url) { return entries.get(url)?.clone(); },
+        async match(url, options = {}) {
+          const canonical = (value) => { const parsed = new URL(value); parsed.search = ""; return parsed.href; };
+          const key = options.ignoreSearch ? [...entries.keys()].find((key) => canonical(key) === canonical(url)) : url;
+          return entries.get(key)?.clone();
+        },
       };
     },
     async keys() { return [...storage.keys()]; },
@@ -92,14 +96,16 @@ test("installation saves the page and every linked app file under the project fo
   const worker = createWorker();
   await worker.lifecycle("install");
   const saved = [...worker.storage.values()][0];
+  const savedPaths = new Set([...saved.keys()].map((key) => { const url = new URL(key); url.search = ""; return url.href; }));
   const html = readFileSync(join(root, "index.html"), "utf8");
   const links = [...html.matchAll(/(?:href|src)="([^"]+)"/g)].map((match) => match[1]);
   for (const path of ["./", "index.html", ...links]) {
-    assert.ok(saved.has(new URL(path, scope).href), `${path} must be available offline`);
+    assert.ok(savedPaths.has(new URL(path, scope).href), `${path} must be available offline`);
   }
   const manifest = JSON.parse(readFileSync(join(root, "manifest.webmanifest"), "utf8"));
-  for (const icon of manifest.icons) assert.ok(saved.has(new URL(icon.src, scope).href));
+  for (const icon of manifest.icons) assert.ok(savedPaths.has(new URL(icon.src, scope).href));
   assert.ok(worker.networkCalls.every((url) => url.startsWith(scope)));
+  assert.ok(worker.networkCalls.every((url) => new URL(url).searchParams.get("app-release") === "v1"), "release URLs bypass the host's older cached files");
   assert.equal(await worker.ready(), true);
 });
 
@@ -164,7 +170,8 @@ test("a failed update leaves the previous offline version usable", async () => {
 test("readiness detects an incomplete saved copy instead of promising offline availability", async () => {
   const worker = createWorker();
   await worker.lifecycle("install");
-  [...worker.storage.values()][0].delete(scope + "styles.css");
+  const saved = [...worker.storage.values()][0];
+  saved.delete([...saved.keys()].find((url) => new URL(url).pathname.endsWith("/styles.css")));
   assert.equal(await worker.ready(), false);
 });
 
@@ -200,7 +207,7 @@ async function createStatus({ supported = true, secure = true, controlled = true
   runInNewContext(readFileSync(join(root, "offline.js"), "utf8"), {
     document: {
       querySelector(id) { return { "#offline-status": status, "#update-status": updateStatus, "#update-button": button }[id]; },
-      body: { dataset: { appVersion: "v3" } }, addEventListener() {},
+      body: { dataset: { appVersion: "v4" } }, addEventListener() {},
     },
     navigator: supported ? { serviceWorker: workers } : {},
     window: { workoutUpdates: workout, isSecureContext: secure, location: { href: scope, reload() { reloads += 1; } }, addEventListener() {} }, URL,
@@ -221,7 +228,7 @@ async function createStatus({ supported = true, secure = true, controlled = true
     async decline() { replyPort.postMessage({ ok: false, reason: "Another workout is active." }); await new Promise((resolve) => setImmediate(resolve)); },
     expire() { for (const callback of [...timers.values()]) callback(); },
     requests,
-    report(ready, source = controller, version = "v3") {
+    report(ready, source = controller, version = "v4") {
       listeners.message({ source, data: { type: "OFFLINE_STATUS", ready, version } });
     },
   };
@@ -289,7 +296,7 @@ test("a worker change never refreshes a window whose user did not request it", a
   const page = await createStatus({ waiting: true });
   page.activated();
   assert.equal(page.reloads(), 0);
-  page.report(true, undefined, "v4");
+  page.report(true, undefined, "v5");
   assert.equal(page.button.hidden, false);
   page.setBusy(true);
   page.click();
@@ -328,7 +335,7 @@ function timerClient(busy = false, url = scope) {
 
 test("future updates wait until all in-scope windows agree and lock their controls", async () => {
   const clients = [timerClient(), timerClient(), timerClient(true, "https://example.test/other/")];
-  const worker = createWorker({ version: "v4", active: true, clients });
+  const worker = createWorker({ version: "v5", active: true, clients });
   await worker.lifecycle("install");
   assert.equal(worker.activations(), 0);
   assert.equal((await worker.apply()).ok, true);
@@ -340,7 +347,7 @@ test("future updates wait until all in-scope windows agree and lock their contro
 
 test("another busy window blocks activation and releases the idle windows", async () => {
   const clients = [timerClient(), timerClient(true)];
-  const worker = createWorker({ version: "v4", active: true, clients });
+  const worker = createWorker({ version: "v5", active: true, clients });
   await worker.lifecycle("install");
   assert.equal((await worker.apply()).ok, false);
   assert.equal(worker.activations(), 0);
@@ -348,32 +355,33 @@ test("another busy window blocks activation and releases the idle windows", asyn
 });
 
 test("an unresponsive older window blocks activation instead of losing its workout", async () => {
-  const worker = createWorker({ version: "v4", active: true, clients: [{ url: scope, postMessage() {} }] });
+  const worker = createWorker({ version: "v5", active: true, clients: [{ url: scope, postMessage() {} }] });
   await worker.lifecycle("install");
   assert.equal((await worker.apply()).ok, false);
   assert.equal(worker.activations(), 0);
 });
 
 test("an incomplete saved update cannot activate", async () => {
-  const worker = createWorker({ version: "v4", active: true, clients: [timerClient()] });
+  const worker = createWorker({ version: "v5", active: true, clients: [timerClient()] });
   await worker.lifecycle("install");
-  [...worker.storage.values()][0].delete(scope + "app.js");
+  const saved = [...worker.storage.values()][0];
+  saved.delete([...saved.keys()].find((url) => new URL(url).pathname.endsWith("/app.js")));
   assert.equal((await worker.apply()).ok, false);
   assert.equal(worker.activations(), 0);
 });
 
-test("the v3 bridge advances only the helper and keeps legacy files for open pages", async () => {
+test("the v4 bridge advances only the helper and keeps legacy files for open pages", async () => {
   const old = createWorker({ version: "v2" });
   await old.lifecycle("install");
   const oldName = [...old.storage.keys()][0];
-  const next = createWorker({ storage: old.storage, version: "v3", active: true, clients: [timerClient(true)] });
+  const next = createWorker({ storage: old.storage, version: "v4", active: true, clients: [timerClient(true)] });
   await next.lifecycle("install");
   assert.equal(next.activations(), 1);
   await next.lifecycle("activate");
   assert.ok(next.storage.has(oldName));
   old.disconnect();
   assert.equal((await old.request(scope)).ok, true);
-  const broken = createWorker({ version: "v3", active: true, failFile: "app.js" });
+  const broken = createWorker({ version: "v4", active: true, failFile: "app.js" });
   await assert.rejects(broken.lifecycle("install"));
   assert.equal(broken.activations(), 0);
 });
@@ -381,4 +389,14 @@ test("the v3 bridge advances only the helper and keeps legacy files for open pag
 test("the page version matches its worker release", () => {
   const version = workerScript.match(/\$\{CACHE_PREFIX\}(v\d+)/)[1];
   assert.ok(readFileSync(join(root, "index.html"), "utf8").includes(`data-app-version="${version}"`));
+});
+
+test("the launch address uses the canonical saved index page, not a stale separate directory page", async () => {
+  const worker = createWorker();
+  await worker.lifecycle("install");
+  const saved = [...worker.storage.values()][0];
+  const directoryKey = [...saved.keys()].find((key) => new URL(key).pathname === "/interval-timer/");
+  saved.set(directoryKey, new Response("stale directory page"));
+  worker.disconnect();
+  assert.match(await (await worker.request(scope)).text(), /Interval Timer · Lesson 10/);
 });
