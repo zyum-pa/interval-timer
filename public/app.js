@@ -9,13 +9,16 @@ const phaseDisplay = document.querySelector("#phase-display");
 const roundDisplay = document.querySelector("#round-display");
 const workoutSummary = document.querySelector("#workout-summary");
 const settingsHint = document.querySelector("#settings-hint");
+const settingsSaveStatus = document.querySelector("#settings-save-status");
 const settingFields = [
   { key: "exerciseSeconds", input: document.querySelector("#exercise-seconds"), error: document.querySelector("#exercise-error"), max: 3600 },
   { key: "restSeconds", input: document.querySelector("#rest-seconds"), error: document.querySelector("#rest-error"), max: 3600 },
   { key: "rounds", input: document.querySelector("#rounds"), error: document.querySelector("#rounds-error"), max: 99 },
 ];
 
-let settings = { exerciseSeconds: 10, restSeconds: 5, rounds: 2 };
+const settingsStorageKey = "interval-timer.settings.v1";
+let settingsStorageAvailable = true;
+let settings = readSavedSettings();
 let settingsValid = true;
 let workout = buildWorkout(settings);
 let phaseIndex = 0;
@@ -29,6 +32,37 @@ let lastCueSecond;
 let audioRunId = 0;
 const activeWorkoutTones = new Set();
 
+function readSavedSettings() {
+  const defaults = { exerciseSeconds: 10, restSeconds: 5, rounds: 2 };
+  let raw;
+  try {
+    raw = localStorage.getItem(settingsStorageKey);
+  } catch {
+    settingsStorageAvailable = false;
+    return defaults;
+  }
+  try {
+    const saved = JSON.parse(raw);
+    if (saved && !Array.isArray(saved) && settingFields.every(({ key, max }) =>
+      Number.isInteger(saved[key]) && saved[key] >= 1 && saved[key] <= max)) {
+      // Restore just the three settings, never timer progress or unknown fields.
+      return Object.fromEntries(settingFields.map(({ key }) => [key, saved[key]]));
+    }
+  } catch {
+    // Invalid saved data falls back to the normal first-use settings.
+  }
+  return defaults;
+}
+
+function saveSettings() {
+  try {
+    localStorage.setItem(settingsStorageKey, JSON.stringify(settings));
+    settingsStorageAvailable = true;
+  } catch {
+    settingsStorageAvailable = false;
+  }
+}
+
 function buildWorkout(values) {
   const phases = [];
   for (let round = 1; round <= values.rounds; round += 1) {
@@ -40,7 +74,7 @@ function buildWorkout(values) {
   return phases;
 }
 
-function applySettings() {
+function applySettings(remember = true) {
   if (timerState === "running" || timerState === "paused") return;
   const nextSettings = {};
   settingsValid = true;
@@ -57,6 +91,7 @@ function applySettings() {
   timerState = "ready";
   if (settingsValid) {
     settings = nextSettings;
+    if (remember) saveSettings();
     workout = buildWorkout(settings);
     phaseIndex = 0;
     remainingMs = workout[0].durationMs;
@@ -140,6 +175,10 @@ function renderTimer() {
   settingsHint.textContent = active
     ? "Settings are locked. Reset to change them."
     : "Adjust before starting. Reset keeps your choices.";
+  const saveMessage = settingsStorageAvailable
+    ? ""
+    : "Settings cannot be remembered here. You can still use the timer.";
+  if (settingsSaveStatus.textContent !== saveMessage) settingsSaveStatus.textContent = saveMessage;
   workoutSummary.textContent = settingsValid
     ? `${settings.exerciseSeconds} sec exercise · ${settings.restSeconds} sec rest · ${settings.rounds} ${settings.rounds === 1 ? "round" : "rounds"}`
     : "Correct the settings below to start.";
@@ -273,5 +312,8 @@ soundButton.addEventListener("click", async () => {
   }
 });
 
-for (const field of settingFields) field.input.addEventListener("input", applySettings);
-applySettings();
+for (const field of settingFields) {
+  field.input.value = String(settings[field.key]);
+  field.input.addEventListener("input", () => applySettings());
+}
+applySettings(false);

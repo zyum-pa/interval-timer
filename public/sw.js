@@ -1,6 +1,6 @@
 // Bump this version whenever any saved app file changes, including this script.
 const CACHE_PREFIX = `interval-timer:${self.registration.scope}:`;
-const CACHE_NAME = `${CACHE_PREFIX}v1`;
+const CACHE_NAME = `${CACHE_PREFIX}v2`;
 const APP_FILES = [
   "./", "./index.html", "./styles.css", "./app.js", "./offline.js",
   "./manifest.webmanifest", "./icons/timer-180.png",

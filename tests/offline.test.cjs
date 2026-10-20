@@ -37,7 +37,7 @@ function createWorker({ storage = new Map(), version = "v1", failFile, offline =
     async keys() { return [...storage.keys()]; },
     async delete(name) { return storage.delete(name); },
   };
-  runInNewContext(workerScript.replace("${CACHE_PREFIX}v1", "${CACHE_PREFIX}" + version), {
+  runInNewContext(workerScript.replace(/(\$\{CACHE_PREFIX\})v\d+/, "$1" + version), {
     self: {
       registration: { scope },
       addEventListener(type, handler) { handlers[type] = handler; },

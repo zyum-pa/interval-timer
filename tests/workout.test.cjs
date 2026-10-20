@@ -8,7 +8,7 @@ const script = readFileSync(join(__dirname, "../public/app.js"), "utf8");
 
 // A controllable clock lets us check full workouts without waiting in real time.
 // The real browser and iPhone tests check what these stand-ins cannot: actual audio and layout.
-function createPage({ audioAllowed = true } = {}) {
+function createPage({ audioAllowed = true, storage = new Map(), storageReadFails = false, storageWriteFails = false } = {}) {
   let now = 0;
   let nextInterval = 0;
   const intervals = new Map();
@@ -66,6 +66,16 @@ function createPage({ audioAllowed = true } = {}) {
   runInNewContext(script, {
     document: { querySelector: element },
     navigator: { audioSession: {} },
+    localStorage: {
+      getItem(key) {
+        if (storageReadFails) throw new Error("Reading storage is blocked.");
+        return storage.get(key) ?? null;
+      },
+      setItem(key, value) {
+        if (storageWriteFails) throw new Error("Writing storage is blocked.");
+        storage.set(key, value);
+      },
+    },
     performance: { now: () => now },
     setInterval(action) { intervals.set(++nextInterval, action); return nextInterval; },
     clearInterval(id) { intervals.delete(id); },
@@ -489,4 +499,106 @@ test("A phase change takes over a late tick without overlapping automatic sounds
   expectDisplay(page, "Rest", 1, "00:02", "Running");
   assert.equal(tick.cancelledAt, 9);
   assert.equal(page.cues.at(-1).frequency, 880);
+});
+
+const settingsKey = "interval-timer.settings.v1";
+
+test("First use has the usual defaults; valid edits are remembered without starting", () => {
+  const storage = new Map();
+  const first = createPage({ storage });
+  expectDisplay(first, "Exercise", 1, "00:10", "Ready");
+  assert.equal(storage.size, 0, "opening the page does not overwrite saved data");
+  configure(first, 8, 7, 2);
+  const reopened = createPage({ storage });
+  assert.deepEqual([reopened.value("exercise-seconds"), reopened.value("rest-seconds"), reopened.value("rounds")], ["8", "7", "2"]);
+  expectDisplay(reopened, "Exercise", 1, "00:08", "Ready");
+});
+
+test("Incomplete edits keep the last valid workout until all three fields are valid", () => {
+  const storage = new Map();
+  const page = createPage({ storage });
+  configure(page, 8, 7, 2);
+  const saved = storage.get(settingsKey);
+  for (const invalid of ["", "0", "-1", "1.5", "3601"]) {
+    page.change("exercise-seconds", invalid);
+    page.change("rest-seconds", "9");
+    assert.equal(storage.get(settingsKey), saved);
+  }
+  expectDisplay(createPage({ storage }), "Exercise", 1, "00:08", "Ready");
+  page.change("exercise-seconds", "4");
+  assert.deepEqual(JSON.parse(storage.get(settingsKey)), { exerciseSeconds: 4, restSeconds: 9, rounds: 2 });
+  expectDisplay(createPage({ storage }), "Exercise", 1, "00:04", "Ready");
+});
+
+test("Malformed, incomplete, or out-of-range saved values fall back to defaults", () => {
+  const invalid = ["not JSON", "null", "[]", '"hello"',
+    JSON.stringify({ exerciseSeconds: 0, restSeconds: 7, rounds: 2 }),
+    JSON.stringify({ exerciseSeconds: 3601, restSeconds: 7, rounds: 2 }),
+    JSON.stringify({ exerciseSeconds: "8", restSeconds: 7, rounds: 2 }),
+    JSON.stringify({ exerciseSeconds: 8.5, restSeconds: 7, rounds: 2 }),
+    JSON.stringify({ exerciseSeconds: 8, restSeconds: -1, rounds: 2 }),
+    JSON.stringify({ exerciseSeconds: 8, restSeconds: 7, rounds: 100 }),
+    JSON.stringify({ exerciseSeconds: 8, restSeconds: 7 }),
+  ];
+  for (const raw of invalid) {
+    const storage = new Map([[settingsKey, raw]]);
+    const page = createPage({ storage });
+    expectDisplay(page, "Exercise", 1, "00:10", "Ready");
+    assert.equal(storage.get(settingsKey), raw);
+    page.change("exercise-seconds", "6");
+    assert.equal(JSON.parse(storage.get(settingsKey)).exerciseSeconds, 6);
+  }
+});
+
+test("Valid boundary values are restored and extra saved fields are not used or resaved", () => {
+  for (const values of [{ exerciseSeconds: 1, restSeconds: 1, rounds: 1 },
+    { exerciseSeconds: 3600, restSeconds: 3600, rounds: 99 }]) {
+    const storage = new Map([[settingsKey, JSON.stringify({ ...values, timerState: "running", remainingMs: 1 })]]);
+    const page = createPage({ storage });
+    assert.equal(page.value("exercise-seconds"), String(values.exerciseSeconds));
+    assert.equal(page.value("rest-seconds"), String(values.restSeconds));
+    assert.equal(page.value("rounds"), String(values.rounds));
+    assert.equal(page.text("timer-status"), "Ready");
+    page.click("reset-button");
+    assert.deepEqual(JSON.parse(storage.get(settingsKey)), values);
+  }
+});
+
+test("Reopening a running or paused workout restores choices and starts ready from round one", () => {
+  for (const pause of [false, true]) {
+    const storage = new Map();
+    const page = createPage({ storage });
+    configure(page, 8, 7, 2);
+    startExercise(page);
+    page.advance(9_000);
+    if (pause) page.click("pause-button");
+    const reopened = createPage({ storage });
+    expectDisplay(reopened, "Exercise", 1, "00:08", "Ready");
+    assert.equal(reopened.enabled("start-button"), true);
+    assert.equal(reopened.enabled("pause-button"), false);
+    page.click("reset-button");
+    expectDisplay(page, "Exercise", 1, "00:08", "Ready");
+    assert.deepEqual(JSON.parse(storage.get(settingsKey)), { exerciseSeconds: 8, restSeconds: 7, rounds: 2 });
+  }
+});
+
+test("Blocked storage reports the limitation and still allows a complete workout", () => {
+  for (const options of [{ storageReadFails: true, storageWriteFails: true }, { storageWriteFails: true }]) {
+    const page = createPage(options);
+    configure(page, 2, 1, 2);
+    assert.match(page.text("settings-save-status"), /cannot be remembered/);
+    startExercise(page);
+    page.advance(5_000);
+    expectDisplay(page, "Complete", 2, "00:00", "Finished");
+    page.click("reset-button");
+    expectDisplay(page, "Exercise", 1, "00:02", "Ready");
+  }
+});
+
+test("Saving workout settings leaves unrelated device storage untouched", () => {
+  const storage = new Map([["other-app", "keep me"]]);
+  const page = createPage({ storage });
+  configure(page, 3, 2, 3);
+  assert.equal(storage.get("other-app"), "keep me");
+  assert.equal(storage.size, 2);
 });

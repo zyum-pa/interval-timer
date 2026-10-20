@@ -73,7 +73,7 @@ button:disabled { opacity: 0.65; cursor: wait; }
 
 .field-error { margin: 8px 0 0; font-size: 0.85rem; color: #a12a24; overflow-wrap: anywhere; }
 
-.field-error:empty { display: none; }
+.field-error:empty, .settings-hint:empty { display: none; }
 
 .workout-progress { margin-top: 28px; text-align: center; }
 

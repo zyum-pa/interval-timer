@@ -23,7 +23,9 @@ The timer is published at **[https://zyum-pa.github.io/interval-timer/](https://
 
 The first version is complete for the intended personal iPhone setup. The user confirmed offline operation on the iPhone, sound alongside YouTube after reconnecting, and correct operation with music both on and off. The screen stayed undimmed during the tested workout and dimmed only after the workout stopped.
 
-After an online visit saves all required files, the app confirms **Ready for offline use**. It can then reopen from its saved copy without internet. The current app remains Lesson 8; this completion checkpoint updates project notes only.
+Current milestone: Lesson 9, remembering workout settings. Valid exercise time, rest time, and round count are saved on this device and restored on reopening, including offline. A reopened timer is ready for a new workout, never resuming old progress. The iPhone settings-memory test is pending.
+
+After an online visit saves all required app files, the app confirms **Ready for offline use**. It can then reopen from its saved copy without internet.
 
 The user confirmed that the Home Screen version works on the iPhone with YouTube playing. The existing icon and app identity are retained; there is no need to reinstall it for this lesson.
 
@@ -33,14 +35,14 @@ The user confirmed that Lesson 5's starting countdown and final-five-second cues
 
 ## Verify Lesson 7: Home Screen installation
 
-These are historical installation checks. The user confirmed them; the current page is Lesson 8.
+These are historical installation checks. The user confirmed them; the current page is Lesson 9.
 
 1. On the iPhone, open **https://zyum-pa.github.io/interval-timer/** in Safari and reload it.
 2. Tap Safari's **Share** button, then **Add to Home Screen**. If shown, keep **Open as Web App** turned on. Keep the name **Interval Timer** and tap **Add**.
 3. On your Home Screen, expect a green icon with a white stopwatch. Tap it: the timer should open in its own app window without Safari's address bar.
 4. Keep the screen unlocked. Choose **8 seconds exercise / 7 seconds rest / 2 rounds** and run a workout. Expect the preparation countdown, warning ticks, phase changes, and completion without a final rest. Also try Pause/Resume and Reset.
 5. Start YouTube music, return to the timer through its Home Screen icon, and repeat. Confirm that music continues and the louder cues remain clear.
-6. Close the timer and reopen it from the icon while online. It should start ready with the usual defaults, not resume an old workout.
+6. Close the timer and reopen it from the icon while online. It should start ready, not resume an old workout. Lesson 9 now restores your last valid choices instead of the defaults.
 
 Product decision: verify Home Screen use before adding offline support so any new audio or launch issue is easier to isolate. Lesson 7 initially required internet to open; Lesson 8 below adds saved offline files. The timer should remain visible with the screen unlocked during workouts.
 
@@ -50,13 +52,30 @@ References: [Apple's Home Screen instructions](https://support.apple.com/en-lamr
 
 ## Verify Lesson 8: offline use
 
-1. Keep internet on. Quit the Home Screen timer from the iPhone app switcher, then reopen it. Look for **Lesson 8** and wait for **Ready for offline use** near the top. Preparation must happen in the Home Screen app itself, even if Safari is already prepared.
+These offline checks still apply on the current Lesson 9 page.
+
+1. Keep internet on. Quit the Home Screen timer from the iPhone app switcher, then reopen it. Wait for **Ready for offline use** near the top. Preparation must happen in the Home Screen app itself, even if Safari is already prepared.
 2. Quit the timer completely. Turn off both **Wi-Fi and mobile data** in Settings, then open the timer from its existing Home Screen icon.
 3. Expect the full page, normal controls, and **Ready for offline use**. Choose **8 seconds exercise / 7 seconds rest / 2 rounds**. Complete a workout with preparation ticks, final-five-second ticks, phase changes, and completion with no final rest.
 4. Try Pause/Resume and Reset offline. Settings should be editable between workouts. On another run, reset and wait: the cancelled workout must not continue.
 5. Reconnect to the internet, start YouTube music, then return to the timer through its icon and repeat a short workout. The louder cues should remain clear while music continues. Keep the timer visible and screen unlocked throughout.
 
-The timer is what works offline; this does not download YouTube music. Clearing website data or the phone removing saved website files can remove the offline copy. If the readiness message is missing or reports failure, reconnect and prepare the app again before relying on it. Saving the app does not preserve your workout settings after reopening.
+The timer is what works offline; this does not download YouTube music. Clearing website data or the phone removing saved website files can remove the offline copy. If the readiness message is missing or reports failure, reconnect and prepare the app again before relying on it. Lesson 9 adds saved workout settings separately from these saved app files.
+
+## Verify Lesson 9: remembered settings
+
+1. While online, open the Home Screen app. If it still shows Lesson 8, allow it to download the update and show **Update saved**, then close all timer windows (including any timer tabs in Safari) and reopen. Expect **Lesson 9** and **Ready for offline use**. Keep the existing Home Screen icon.
+2. Choose **8 seconds exercise / 7 seconds rest / 2 rounds**, then quit and reopen the app. Expect those same values, **Exercise**, **Round 1 of 2**, **00:08**, and **Ready**. No workout should start automatically.
+3. Quit again, turn off both Wi-Fi and mobile data in Settings, and reopen. The same choices should return. While offline, change them to **5 / 3 / 3**, quit, and reopen again. Expect the new choices and **00:05**.
+4. Enter **0** for exercise and expect an error. Quit and reopen: expect the last valid **5 / 3 / 3**, not the invalid entry or defaults.
+5. Run a workout with the saved choices, checking Pause/Resume and Reset. Reset keeps the choices; reopening a running or paused workout starts ready from round one with its full exercise time.
+6. Restore internet and repeat a short workout with YouTube playing. Keep the timer visible and screen unlocked.
+
+Product decisions: save the complete valid set automatically between workouts, without a Save button or extra always-visible message. Blank or invalid fields never overwrite the last valid set. First use, missing data, or invalid stored values use the original **10 / 5 / 2** defaults. If reading or writing storage is blocked, show a brief notice and let the timer keep working.
+
+Only the three numeric choices are saved in the browser's local storage (small data kept on this device), under `interval-timer.settings.v1`. Restored values are checked against the same bounds as inputs; timer progress and unknown fields are not restored. No new accounts, packages, tracking, or synchronization were added. The Home Screen app and Safari may have separate storage; test and use the same app. Clearing website data can remove these choices.
+
+Reference: [browser local storage](https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage).
 
 ## Offline implementation and future updates
 
@@ -64,7 +83,7 @@ The timer is what works offline; this does not download YouTube music. Clearing 
 
 The worker saves one complete version of the HTML, CSS, JavaScript, manifest, and icons. It serves only these known app files from its versioned cache (the browser's saved file storage), including the folder's entry page. It does not save unrelated sites or other projects. A missing file causes installation to fail; readiness is shown only after the controlling worker checks that every required file is present.
 
-For every future app-file change, **increase the `v1` cache version in `public/sw.js`** as part of that checkpoint. Publish the whole `public/` folder together. A new worker downloads a separate complete copy and waits until all old timer windows, including Safari tabs, are closed. It never forces a refresh or takes over a running or paused workout. The message **Update saved** explains how to switch after finishing. Activation removes only this timer scope's old copies. A failed update leaves the previous version intact.
+For every future app-file change, **increase the cache version in `public/sw.js` (currently `v2`)** as part of that checkpoint. Publish the whole `public/` folder together. A new worker downloads a separate complete copy and waits until all old timer windows, including Safari tabs, are closed. It never forces a refresh or takes over a running or paused workout. The message **Update saved** explains how to switch after finishing. Activation removes only this timer scope's old copies, not saved workout settings. A failed update leaves the previous version intact.
 
 Reference: [browser worker installation and updates](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API/Using_Service_Workers).
 
@@ -130,7 +149,7 @@ Keep the page visible and the screen unlocked during this test. Reload Safari to
 7. Start again, pause, then reset. Expect **00:10** and **Ready** again.
 8. On your iPhone, repeat with music playing in the YouTube app. Confirm that the automatic beep at zero is audible and that music continues.
 
-These are historical checks. The current page is Lesson 8; the Lesson 5 workout checks below still apply.
+These are historical checks. The current page is Lesson 9; the Lesson 5 workout checks below still apply.
 
 ## Historical Lesson 3 checks
 
@@ -157,14 +176,14 @@ Reload Safari and look for **Interval Timer · Lesson 4**. Keep the page visible
 5. Reset during the workout. Expect **Exercise**, **Round 1 of 3**, **00:03**, **Ready**; the selected values remain **3 / 2 / 3** and become editable. The cancelled run must not resume or play future cues.
 6. Choose **4** seconds exercise and **1** round. Start: expect four seconds of exercise followed immediately by completion, with no rest.
 7. While ready, clear a setting or enter **0**, a negative number, or a fraction. Expect an explanation beside that field, **Check settings**, **--:--**, and an unavailable Start button. Correct the entry: the error clears and Start becomes available.
-8. Try **61** seconds exercise while ready. Expect **01:01** in the preview. Reload the page: the defaults return to **10 / 5 / 2**.
+8. Try **61** seconds exercise while ready. Expect **01:01** in the preview. Lesson 4 originally restored defaults on reload; Lesson 9 now preserves these choices.
 9. Repeat a short workout on the iPhone with YouTube music playing. Check input comfort, readable labels, audible cues, and music continuing.
 
-Product decisions: whole seconds and positive round counts keep setup straightforward. Visible limits of 1–3,600 seconds per phase and 1–99 rounds catch accidental oversized entries and keep generated workouts small. Changes apply between workouts, and Reset retains the user's choices. Remembering settings after refreshing or closing the page is a later lesson. No new packages were added.
+Product decisions: whole seconds and positive round counts keep setup straightforward. Visible limits of 1–3,600 seconds per phase and 1–99 rounds catch accidental oversized entries and keep generated workouts small. Changes apply between workouts, and Reset retains the user's choices. Lesson 9 adds remembering choices across reopening. No new packages were added.
 
 ## Verify Lesson 5
 
-These workout checks still apply on the current Lesson 8 page. Keep the page visible and the screen unlocked.
+These workout checks still apply on the current Lesson 9 page. Keep the page visible and the screen unlocked.
 
 1. Choose **8** seconds exercise, **7** seconds rest, **2** rounds. Tap Start: expect **Get ready**, **Round 1 of 2**, and **00:03 → 00:02 → 00:01**, with three short ticks. Then expect the exercise opening cue and the full **00:08** exercise period.
 2. In exercise, expect one short tick at **5, 4, 3, 2, 1** seconds remaining, then the stronger rest-opening cue. In rest, expect another five ticks before the next exercise-opening cue.
@@ -267,3 +286,10 @@ The YouTube app must already support playback while another app is visible for t
 - Combined with the earlier feature, Home Screen, and offline confirmations, this meets the first-version goals for the user's tested setup. No workout duration or additional device/iOS coverage is inferred from the report.
 - This records observed screen behavior, not a new screen-wake feature or a guarantee for other phone settings. The app code is unchanged; the preceding 36 automated checks remain the latest code verification.
 - Stop adding features for this version. Further lessons or improvements should follow the user's experience and priorities.
+
+## Lesson 9 checkpoint — October 20, 2026
+
+- Added automatic saving and validated restoration of workout settings. New sessions open ready from the beginning. Storage failures do not block workouts, and invalid edits preserve the last valid saved set.
+- Increased the offline app-cache version to `v2`; workout settings are stored separately so app updates do not clear them. The offline test helper now chooses test versions independently of the production version.
+- All 43 automated checks passed, including seven new settings-memory checks. Real iPhone verification is pending.
+- In a real desktop browser, settings returned after closing and reopening online and with the local web server stopped. An invalid entry did not replace the saved set. New choices entered offline also survived closing and reopening. An offline workout completed using those choices, including Pause/Resume and Reset.
