@@ -23,7 +23,7 @@ The timer is published at **[https://zyum-pa.github.io/interval-timer/](https://
 
 The first version is complete for the intended personal iPhone setup. The user confirmed offline operation on the iPhone, sound alongside YouTube after reconnecting, and correct operation with music both on and off. The screen stayed undimmed during the tested workout and dimmed only after the workout stopped.
 
-Current milestone: Lesson 10, explicit app updates. Downloaded updates offer an **Update app** button in **App updates**, below the workout controls. Running and paused workouts are protected, settings are preserved, and update failures release the controls. The user confirmed that Lesson 10 reached the existing iPhone Home Screen app and settings were preserved. The v5 follow-up release adds **update test** to the lesson label; real iPhone button verification is pending.
+Current milestone completed: Lesson 10, explicit app updates. Downloaded updates offer an **Update app** button in **App updates**, below the workout controls. Running and paused workouts are protected, settings are preserved, and update failures release the controls. The user confirmed that Lesson 10 reached the existing iPhone Home Screen app and settings were preserved. On the v5 follow-up, the user confirmed that the button stayed disabled while paused, applied after Reset, showed **Lesson 10 · update test**, preserved settings, and left the workout working with YouTube.
 
 The user confirmed that Lesson 9 remembers workout settings on the iPhone, including offline, and that workouts still work with YouTube. The initial Lesson 8 → 9 update was stuck until the phone restarted; Lesson 10 addresses that handoff instead of requiring routine phone restarts.
 
@@ -98,7 +98,7 @@ Stage 2: test **Update app** with the v5 follow-up release, marked **Interval Ti
 3. If another timer window has a running or paused workout, applying from an idle window must be declined without disrupting either window. Idle windows release their controls after a declined or timed-out update. Older unresponsive timer windows must be closed before a normal button update can proceed.
 4. Verify the new version opens offline and workouts still work with YouTube after reconnecting. Repeated taps must not trigger overlapping updates. Only the window whose user requested the update refreshes.
 
-No new accounts, packages, or browser permissions are needed. We can verify browser behavior locally; actual Home Screen migration and update-button behavior remain iPhone acceptance checks.
+No new accounts, packages, or browser permissions are needed. The user confirmed actual Home Screen migration and the main update-button flow on the iPhone. Multi-window coordination, failure recovery, and offline reopening of an updated release were checked in the desktop browser; these additional cases are not inferred from the iPhone report.
 
 ## Offline implementation and future updates
 
@@ -325,9 +325,10 @@ The YouTube app must already support playback while another app is visible for t
 - Added the one-time v4 legacy bridge to address current Lesson 9 installations, without clearing settings or navigating an open workout. The initial v3 publication exposed stale host-cached launch HTML during live verification; v4 requests fresh release files and serves the canonical saved index for the launch address.
 - All 56 automated checks passed. In the browser, the exact saved Lesson 9 version was left paused in one window while another downloaded the corrected v4 bridge. Lesson 10 then loaded despite that retained old window, with saved choices intact; the old workout remained paused.
 - A separate temporary normal update was declined while another new-version window was paused, then applied after both were idle. Only the requesting window refreshed. With the corrected download and cache matching, a temporary v5 update was blocked during a paused workout, applied after Reset with the server stopped, and cold-opened offline with settings preserved.
-- The user subsequently confirmed Lesson 10 in the existing iPhone Home Screen app, with settings still remembered. This completes Stage 1 and allows the v5 verification release; the actual iPhone button test remains pending.
+- The user subsequently confirmed Lesson 10 in the existing iPhone Home Screen app, with settings still remembered. This completed Stage 1 and allowed the v5 verification release; the follow-up result is recorded below.
 
 ## Lesson 10 follow-up: update-button verification
 
 - Release v5 changes only the lesson label to **Interval Timer · Lesson 10 · update test** and advances the saved app version. It uses the normal waiting update process, without the one-time v4 bridge. No workout behavior, packages, or accounts are added.
-- Publish the release and pause for the Stage 2 iPhone checks above. Do not infer a successful button update from simply seeing the new label after closing every window.
+- All 56 automated checks passed before publication. On the live website, the update waited during running and paused workouts, applied after Reset through the button, and preserved the saved choices.
+- The user confirmed on the iPhone that **Update app** stayed disabled while paused, updated after Reset, and displayed **Lesson 10 · update test**. Settings were remembered and the workout still worked with YouTube. This completes the main update-button milestone; no further app release is needed to record this result.
