@@ -117,7 +117,7 @@ function createPage({ audioAllowed = true, storage = new Map(), storageReadFails
 
 function expectDisplay(page, phase, round, time, status, totalRounds = 2) {
   assert.equal(page.text("phase-display"), phase);
-  assert.equal(page.text("round-display"), `Round ${round} of ${totalRounds}`);
+  assert.equal(page.text("round-display"), `Set ${round} of ${totalRounds}`);
   assert.equal(page.text("time-display"), time);
   assert.equal(page.text("timer-status"), status);
 }
@@ -683,15 +683,15 @@ test("two exercises run consecutively, rest once per round, and skip final rest"
   page.click("add-exercise");
   page.change("exercise-2-seconds", "2");
   startExercise(page);
-  expectDisplay(page, "Exercise 1 of 2", 1, "00:03", "Running");
+  expectDisplay(page, "Exercise", 1, "00:03", "Running");
   page.advance(3_000);
-  expectDisplay(page, "Exercise 2 of 2", 1, "00:02", "Running");
+  expectDisplay(page, "Exercise", 1, "00:02", "Running");
   page.advance(2_000);
   expectDisplay(page, "Rest", 1, "00:01", "Running");
   page.advance(1_000);
-  expectDisplay(page, "Exercise 1 of 2", 2, "00:03", "Running");
+  expectDisplay(page, "Exercise", 2, "00:03", "Running");
   page.advance(3_000);
-  expectDisplay(page, "Exercise 2 of 2", 2, "00:02", "Running");
+  expectDisplay(page, "Exercise", 2, "00:02", "Running");
   page.advance(2_000);
   expectDisplay(page, "Complete", 2, "00:00", "Finished");
   assert.equal(page.cues.filter((cue) => cue.frequency === 880).length, 5);
@@ -705,9 +705,9 @@ test("one round completes all exercises without any rest", () => {
   page.click("add-exercise");
   startExercise(page);
   page.advance(1_000);
-  expectDisplay(page, "Exercise 2 of 3", 1, "00:01", "Running", 1);
+  expectDisplay(page, "Exercise", 1, "00:01", "Running", 1);
   page.advance(1_000);
-  expectDisplay(page, "Exercise 3 of 3", 1, "00:01", "Running", 1);
+  expectDisplay(page, "Exercise", 1, "00:01", "Running", 1);
   page.advance(1_000);
   expectDisplay(page, "Complete", 1, "00:00", "Finished", 1);
 });
@@ -721,10 +721,10 @@ test("pausing the second exercise preserves its position and fractional remainin
   page.advance(3_300);
   page.click("pause-button");
   page.advance(30_000);
-  expectDisplay(page, "Exercise 2 of 2", 1, "00:03", "Paused", 1);
+  expectDisplay(page, "Exercise", 1, "00:03", "Paused", 1);
   page.click("pause-button");
   page.advance(2_699);
-  expectDisplay(page, "Exercise 2 of 2", 1, "00:01", "Running", 1);
+  expectDisplay(page, "Exercise", 1, "00:01", "Running", 1);
   page.advance(1);
   expectDisplay(page, "Complete", 1, "00:00", "Finished", 1);
 });
@@ -739,7 +739,7 @@ test("exercise editing is locked during workouts and updates, then restored afte
       assert.equal(page.enabled(id), false);
     }
     page.click("reset-button");
-    expectDisplay(page, "Exercise 1 of 2", 1, "00:10", "Ready");
+    expectDisplay(page, "Exercise", 1, "00:10", "Ready");
   }
   assert.equal(page.updates.begin(), true);
   assert.equal(page.enabled("add-exercise"), false);
@@ -778,7 +778,7 @@ test("all exercise durations and their order survive reopening, including invali
     reopened.value("exercise-2-minutes"), reopened.value("exercise-2-seconds")], ["05", "30", "01", "15"]);
   assert.equal(reopened.value("rest-minutes"), "01");
   assert.equal(reopened.value("rest-seconds"), "30");
-  expectDisplay(reopened, "Exercise 1 of 2", 1, "05:30", "Ready", 3);
+  expectDisplay(reopened, "Exercise", 1, "05:30", "Ready", 3);
 });
 
 test("old saved settings become Exercise 1 without overwriting the old version's data", () => {
@@ -805,5 +805,5 @@ test("invalid old storage falls back cleanly and valid new storage takes priorit
     ["interval-timer.settings.v1", JSON.stringify({ exerciseSeconds: 10, restSeconds: 5, rounds: 2 })],
     [settingsKey, JSON.stringify({ exercises: [8, 7], restSeconds: 6, rounds: 3 })],
   ]) });
-  expectDisplay(page, "Exercise 1 of 2", 1, "00:08", "Ready", 3);
+  expectDisplay(page, "Exercise", 1, "00:08", "Ready", 3);
 });

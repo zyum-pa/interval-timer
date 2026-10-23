@@ -94,9 +94,8 @@ function saveSettings() {
 function buildWorkout(values) {
   const phases = [];
   for (let round = 1; round <= values.rounds; round += 1) {
-    values.exercises.forEach((seconds, index) => {
-      const phase = values.exercises.length === 1 ? "Exercise" : `Exercise ${index + 1} of ${values.exercises.length}`;
-      phases.push({ phase, round, durationMs: seconds * 1000 });
+    values.exercises.forEach((seconds) => {
+      phases.push({ phase: "Exercise", round, durationMs: seconds * 1000 });
     });
     if (round < values.rounds) {
       phases.push({ phase: "Rest", round, durationMs: values.restSeconds * 1000 });
@@ -254,7 +253,7 @@ function renderTimer() {
   timeDisplay.textContent = settingsValid ? `${minutesText}:${secondsText}` : "--:--";
   const currentPhase = phaseIndex === -1 ? { phase: "Get ready", round: 1 } : workout[phaseIndex];
   const phase = timerState === "finished" ? "Complete" : currentPhase.phase;
-  const round = settingsValid ? `Round ${currentPhase.round} of ${settings.rounds}` : "Round —";
+  const round = settingsValid ? `Set ${currentPhase.round} of ${settings.rounds}` : "Set —";
   // Update announcements only when the phase or round actually changes.
   if (phaseDisplay.textContent !== phase) phaseDisplay.textContent = phase;
   if (roundDisplay.textContent !== round) roundDisplay.textContent = round;

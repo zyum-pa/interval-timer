@@ -16,14 +16,14 @@
     <script src="app.js" defer></script>
     <script src="offline.js" defer></script>
   </head>
-  <body data-app-version="v7">
+  <body data-app-version="v8">
     <main>
       <header>
         <h1>Interval Timer</h1>
-        <p id="offline-status" role="status">Preparing offline use…</p>
+        <p id="offline-status" role="status"></p>
       </header>
       <fieldset class="settings">
-        <legend>Workout <span>min : sec</span></legend>
+        <legend>Workout</legend>
         <div id="exercise-list"></div>
         <button id="add-exercise" class="quiet" type="button">+ Add exercise</button>
         <div class="settings-bottom">
@@ -37,7 +37,7 @@
             <p id="rest-error" class="field-error" aria-live="polite"></p>
           </div>
           <div>
-            <label for="rounds">Rounds</label>
+            <label for="rounds">Sets</label>
             <input id="rounds" type="number" inputmode="numeric" min="1" max="99" step="1" value="2" required aria-describedby="rounds-error">
             <p id="rounds-error" class="field-error" aria-live="polite"></p>
           </div>
@@ -46,7 +46,7 @@
       </fieldset>
       <div class="workout-progress" aria-live="polite" aria-atomic="true">
         <p id="phase-display">Exercise</p>
-        <p id="round-display">Round 1 of 2</p>
+        <p id="round-display">Set 1 of 2</p>
       </div>
       <p id="time-display" role="timer" aria-label="Time remaining">00:10</p>
       <p id="timer-status" role="status">Ready</p>

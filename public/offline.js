@@ -24,7 +24,7 @@
   let lockTimeout;
 
   function renderStatus() {
-    const message = ready ? "Ready for offline use." : failed
+    const message = ready ? "" : failed
       ? "Offline copy could not be saved. Use the timer online and try reopening it with internet."
       : "Saving for offline use… Keep this app open with internet.";
     if (status.textContent !== message) status.textContent = message;

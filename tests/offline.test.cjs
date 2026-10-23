@@ -250,7 +250,7 @@ test("registration alone does not promise offline readiness; only the controllin
   page.report(true, {});
   assert.match(page.text(), /Saving/);
   page.report(true);
-  assert.equal(page.text(), "Ready for offline use.");
+  assert.equal(page.text(), "", "offline readiness clears the saving notice without a routine success label");
   assert.equal(page.updatePanel.hidden, true, "no update notice occupies the normal workout screen");
   page.report(false);
   assert.match(page.text(), /could not be saved/);
@@ -263,10 +263,10 @@ test("failed registration is reported without affecting workout code", async () 
   assert.match(page.text(), /could not be saved/);
 });
 
-test("a saved update offers a button and preserves offline readiness", async () => {
+test("a saved update offers a button without restoring routine offline status text", async () => {
   const page = await createStatus({ waiting: true });
   page.report(true);
-  assert.match(page.text(), /Ready for offline use/);
+  assert.equal(page.text(), "");
   assert.match(page.updateText(), /Tap Update app/);
   assert.equal(page.button.hidden, false);
   assert.equal(page.button.disabled, false);

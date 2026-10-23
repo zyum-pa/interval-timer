@@ -18,6 +18,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 h1 { margin: 0; font-size: 1.35rem; line-height: 1.2; }
 p { line-height: 1.4; }
 #offline-status { max-width: 150px; margin: 0; color: #3e625b; font-size: 0.75rem; text-align: right; }
+#offline-status:empty { display: none; }
 
 button {
   width: 100%;
@@ -44,7 +45,6 @@ button:disabled { opacity: 0.55; cursor: default; }
 .settings { margin: 20px 0 0; padding: 12px; border: 1px solid #c4d0c7; border-radius: 14px; }
 
 .settings legend { padding: 0 6px; font-size: 0.875rem; font-weight: 700; }
-.settings legend span { margin-left: 6px; color: #3e625b; font-size: 0.75rem; font-weight: 400; }
 
 .exercise-row { display: grid; grid-template-columns: minmax(0, 1fr) 130px 44px; align-items: center; column-gap: 8px; margin-top: 8px; }
 .exercise-row > span { font-size: 0.875rem; font-weight: 650; }
@@ -83,7 +83,7 @@ button:disabled { opacity: 0.55; cursor: default; }
 
 #phase-display { margin: 0; font-size: 1.5rem; font-weight: 750; }
 
-#round-display { margin: 4px 0 0; font-size: 0.9rem; color: #3e625b; }
+#round-display { margin: 8px 0 0; font-size: 1.6rem; font-weight: 750; color: #176b58; text-transform: uppercase; }
 
 #time-display {
   margin: 8px 0 0;
