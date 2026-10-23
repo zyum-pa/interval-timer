@@ -117,6 +117,7 @@ function createPage({ audioAllowed = true, storage = new Map(), storageReadFails
 
 function expectDisplay(page, phase, round, time, status, totalRounds = 2) {
   assert.equal(page.text("phase-display"), phase);
+  assert.equal(page.hidden("phase-display"), phase === "Exercise");
   assert.equal(page.text("round-display"), `Set ${round} of ${totalRounds}`);
   assert.equal(page.text("time-display"), time);
   assert.equal(page.text("timer-status"), status);

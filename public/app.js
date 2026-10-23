@@ -256,6 +256,7 @@ function renderTimer() {
   const round = settingsValid ? `Set ${currentPhase.round} of ${settings.rounds}` : "Set —";
   // Update announcements only when the phase or round actually changes.
   if (phaseDisplay.textContent !== phase) phaseDisplay.textContent = phase;
+  phaseDisplay.hidden = phase === "Exercise";
   if (roundDisplay.textContent !== round) roundDisplay.textContent = round;
   const labels = { ready: "Ready", running: "Running", paused: "Paused", finished: "Finished" };
   const status = settingsValid ? labels[timerState] : "Check settings";

@@ -16,7 +16,7 @@
     <script src="app.js" defer></script>
     <script src="offline.js" defer></script>
   </head>
-  <body data-app-version="v8">
+  <body data-app-version="v9">
     <main>
       <header>
         <h1>Interval Timer</h1>
@@ -28,7 +28,7 @@
         <button id="add-exercise" class="quiet" type="button">+ Add exercise</button>
         <div class="settings-bottom">
           <div>
-            <label id="rest-label">Rest after exercises</label>
+            <label id="rest-label">Rest</label>
             <div class="time-inputs" role="group" aria-labelledby="rest-label">
               <input id="rest-minutes" type="text" inputmode="numeric" pattern="[0-9]{1,2}" maxlength="2" value="00" aria-label="Rest minutes" aria-describedby="rest-error" required>
               <span aria-hidden="true">:</span>
@@ -45,7 +45,7 @@
         <p id="settings-save-status" class="settings-hint" role="status"></p>
       </fieldset>
       <div class="workout-progress" aria-live="polite" aria-atomic="true">
-        <p id="phase-display">Exercise</p>
+        <p id="phase-display" hidden>Exercise</p>
         <p id="round-display">Set 1 of 2</p>
       </div>
       <p id="time-display" role="timer" aria-label="Time remaining">00:10</p>
